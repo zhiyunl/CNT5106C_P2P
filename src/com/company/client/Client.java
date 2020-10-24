@@ -1,16 +1,20 @@
-package com.company.sender;
+package com.company.client;
+
+import com.company.helper.ConstructHandshakeMsg;
 
 import java.io.*;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-public class Sender extends Thread {
+public class Client extends Thread {
     private Socket requestSocket;           //socket connect to the server
     private ObjectOutputStream out;         //stream write to the socket
     private ObjectInputStream in;
     private int socketId;
-    public Sender(int socketId) {
+    private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
+
+    public Client(int socketId) {
         this.socketId = socketId;
     }
 
@@ -23,6 +27,12 @@ public class Sender extends Thread {
             out = new ObjectOutputStream(requestSocket.getOutputStream());
             out.flush();
             in = new ObjectInputStream(requestSocket.getInputStream());
+            ConstructHandshakeMsg constructHandshakeMsg = new ConstructHandshakeMsg();
+            sendMessage(constructHandshakeMsg.constructHandshake(socketId));
+            byte[] handshakeMsg = (byte[]) in.readObject();
+            if (constructHandshakeMsg.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && constructHandshakeMsg.getHandshakeId(handshakeMsg) == socketId) {
+                System.out.println("-----------------we have connected the right neighbour-----------------");
+            }
 
             //get Input from standard input
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
@@ -59,16 +69,34 @@ public class Sender extends Thread {
         }
     }
 
-        //send a message to the output stream
-        private void sendMessage(String msg)
-        {
-            try{
-                //stream write the message
-                out.writeObject(msg);
-                out.flush();
-            }
-            catch(IOException ioException){
-                ioException.printStackTrace();
-            }
+
+
+    private void sendMessage(String msg)
+    {
+        try{
+            //stream write the message
+            out.writeObject(msg);
+            out.flush();
         }
+        catch(IOException ioException){
+            ioException.printStackTrace();
+        }
+    }
+
+
+    //send a message to the output stream
+    private void sendMessage(byte[] message)
+    {
+        try{
+            //stream write the message
+            out.writeObject(message);
+            out.flush();
+        }
+        catch(IOException ioException){
+            ioException.printStackTrace();
+        }
+    }
+
+
+
 }

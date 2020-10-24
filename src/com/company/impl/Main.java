@@ -1,7 +1,7 @@
 package com.company.impl;
 
-import com.company.receiver.ReceiverListener;
-import com.company.sender.SenderListener;
+import com.company.server.ServerListener;
+import com.company.client.ClientListener;
 
 public class Main {
 
@@ -11,10 +11,10 @@ public class Main {
     private int[] socketList = new int[]{8001, 8002, 8003};
 
     private Main() {
-        ReceiverListener receiverListener = new ReceiverListener(id, sPort);
-        receiverListener.start();
-        SenderListener senderListener = new SenderListener(socketList, peerList, id);
-        senderListener.start();
+        ServerListener serverListener = new ServerListener(id, sPort);
+        serverListener.start();
+        ClientListener clientListener = new ClientListener(socketList, peerList, id);
+        clientListener.start();
     }
 
     public static void main(String[] args) {

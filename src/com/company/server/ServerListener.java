@@ -1,12 +1,12 @@
-package com.company.receiver;
+package com.company.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 
-public class ReceiverListener extends Thread{
+public class ServerListener extends Thread{
     private int id;
     private int sPort;
-    public ReceiverListener(int id, int sPort) {
+    public ServerListener(int id, int sPort) {
         this.id = id;
         this.sPort = sPort;
     }
@@ -17,7 +17,7 @@ public class ReceiverListener extends Thread{
             ServerSocket listener = new ServerSocket(sPort);
             int clientNum = 1;
             while (true) {
-                new Receiver(listener.accept(), clientNum).start();
+                new Server(listener.accept(), clientNum, id).start();
                 System.out.println("Client " + clientNum + " is connected!");
                 clientNum++;
             }
