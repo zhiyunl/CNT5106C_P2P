@@ -3,10 +3,10 @@ package com.company.receiver;
 import java.io.IOException;
 import java.net.ServerSocket;
 
-public class Listener extends Thread{
+public class ReceiverListener extends Thread{
     private int id;
     private int sPort;
-    public Listener(int id, int sPort) {
+    public ReceiverListener(int id, int sPort) {
         this.id = id;
         this.sPort = sPort;
     }
