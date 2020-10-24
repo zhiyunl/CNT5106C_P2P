@@ -12,7 +12,7 @@ public class ClientListener extends Thread {
 
     public void run() {
         for (int i = 0; i < peerList.length && peerList[i] < id; i++) {
-            new Client(socketList[i]).start();
+            new Client(socketList[i], peerList[i], id).start();
         }
     }
 

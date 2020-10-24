@@ -12,10 +12,14 @@ public class Client extends Thread {
     private ObjectOutputStream out;         //stream write to the socket
     private ObjectInputStream in;
     private int socketId;
+    private int peerId;
+    private int id;
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
 
-    public Client(int socketId) {
+    public Client(int socketId, int peerId, int id) {
         this.socketId = socketId;
+        this.peerId = peerId;
+        this.id = id;
     }
 
     public void run() {
@@ -28,9 +32,9 @@ public class Client extends Thread {
             out.flush();
             in = new ObjectInputStream(requestSocket.getInputStream());
             ConstructHandshakeMsg constructHandshakeMsg = new ConstructHandshakeMsg();
-            sendMessage(constructHandshakeMsg.constructHandshake(socketId));
+            sendMessage(constructHandshakeMsg.constructHandshake(id));
             byte[] handshakeMsg = (byte[]) in.readObject();
-            if (constructHandshakeMsg.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && constructHandshakeMsg.getHandshakeId(handshakeMsg) == socketId) {
+            if (constructHandshakeMsg.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && constructHandshakeMsg.getHandshakeId(handshakeMsg) == peerId) {
                 System.out.println("-----------------we have connected the right neighbour-----------------");
             }
 
