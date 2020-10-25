@@ -1,32 +1,32 @@
 package com.company.client;
 
 import com.company.helper.ConstructHandshakeMsg;
+import com.company.helper.P2PFileProcess;
 
 import java.io.*;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.List;
 
 public class Client extends Thread {
     private Socket requestSocket;           //socket connect to the server
     private ObjectOutputStream out;         //stream write to the socket
     private ObjectInputStream in;
-    private int socketId;
-    private int peerId;
+    private P2PFileProcess.PeerInfo peerInfo;
     private int id;
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
 
-    public Client(int socketId, int peerId, int id) {
-        this.socketId = socketId;
-        this.peerId = peerId;
+    public Client(P2PFileProcess.PeerInfo peerInfo, int id) {
+        this.peerInfo = peerInfo;
         this.id = id;
     }
 
     public void run() {
         try {
             //create a socket to connect to the server
-            requestSocket = new Socket("localhost", socketId);
-            System.out.println("Connected to localhost in port " + socketId);
+            requestSocket = new Socket(peerInfo.hostName, peerInfo.port);
+            System.out.println("Connected to localhost in port " + peerInfo.port);
             //initialize inputStream and outputStream
             out = new ObjectOutputStream(requestSocket.getOutputStream());
             out.flush();
@@ -34,7 +34,7 @@ public class Client extends Thread {
             ConstructHandshakeMsg constructHandshakeMsg = new ConstructHandshakeMsg();
             sendMessage(constructHandshakeMsg.constructHandshake(id));
             byte[] handshakeMsg = (byte[]) in.readObject();
-            if (constructHandshakeMsg.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && constructHandshakeMsg.getHandshakeId(handshakeMsg) == peerId) {
+            if (constructHandshakeMsg.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && constructHandshakeMsg.getHandshakeId(handshakeMsg) == peerInfo.ID) {
                 System.out.println("-----------------we have connected the right neighbour-----------------");
             }
 

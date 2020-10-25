@@ -1,18 +1,23 @@
 package com.company.client;
 
+import com.company.helper.P2PFileProcess;
+
+import java.util.List;
+
 public class ClientListener extends Thread {
-    private int[] socketList;
-    private int[] peerList;
+    private List<P2PFileProcess.PeerInfo> peersInfo;
     private int id;
-    public ClientListener(int[] socketList, int[] peerList, int id) {
-        this.socketList = socketList;
-        this.peerList = peerList;
+    public ClientListener(List<P2PFileProcess.PeerInfo> peersInfo, int id) {
+        this.peersInfo = peersInfo;
         this.id = id;
     }
 
     public void run() {
-        for (int i = 0; i < peerList.length && peerList[i] < id; i++) {
-            new Client(socketList[i], peerList[i], id).start();
+        for (P2PFileProcess.PeerInfo peerInfo : peersInfo) {
+            if (peerInfo.ID >= id) {
+                break;
+            }
+            new Client(peerInfo, id).start();
         }
     }
 

@@ -1,7 +1,11 @@
 package com.company.impl;
 
+import com.company.helper.P2PFileProcess;
 import com.company.server.ServerListener;
 import com.company.client.ClientListener;
+
+import java.io.IOException;
+import java.util.List;
 
 public class Main {
 
@@ -11,10 +15,16 @@ public class Main {
     private int[] socketList = new int[]{8001, 8002, 8003};
 
     private Main() {
-        ServerListener serverListener = new ServerListener(id, sPort);
-        serverListener.start();
-        ClientListener clientListener = new ClientListener(socketList, peerList, id);
-        clientListener.start();
+        P2PFileProcess p2PFileProcess = new P2PFileProcess();
+        try {
+            List<P2PFileProcess.PeerInfo> peersinfo = p2PFileProcess.PeerInfoCfg();
+            ServerListener serverListener = new ServerListener(peersinfo, id);
+            serverListener.start();
+            ClientListener clientListener = new ClientListener(peersinfo, id);
+            clientListener.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {

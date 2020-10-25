@@ -4,6 +4,8 @@ import java.io.*;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
 public class P2PFileProcess {
     // common.cfg
@@ -14,8 +16,8 @@ public class P2PFileProcess {
     int FileSize;
     int PieceSize;
     // peerInfo.cfg
-    int MAX_PEER_NUM =20; // maximum of object array to hold peers
-    PeerInfo[] peers;
+    //int MAX_PEER_NUM =20; // maximum of object array to hold peers
+    List<PeerInfo> peers;
 
     int peerNum; // total # of valid peers
     // LOG TYPE
@@ -83,8 +85,9 @@ public class P2PFileProcess {
         }
     }
 
-    public void PeerInfoCfg() throws IOException{
+    public List<PeerInfo> PeerInfoCfg() throws IOException{
         // TODO read PeerInfo.cfg
+        this.peers = new LinkedList<>();
         String workDir = System.getProperty("user.dir");
         String peerInfoCfg = "PeerInfo.cfg";
         String absolutePath = workDir + File.separator + peerInfoCfg;
@@ -95,15 +98,20 @@ public class P2PFileProcess {
             String str;
             int cnt = 0;
             String[] line;
-            this.peers = new PeerInfo[this.MAX_PEER_NUM];
-            while (((str = bReader.readLine()) != null) && cnt < this.MAX_PEER_NUM) {
+            while ((str = bReader.readLine()) != null) {
                 line = str.split(" ");
                 // save peer info one by one into struct array
-                this.peers[cnt] = new PeerInfo();
+                PeerInfo peer = new PeerInfo();
+                peer.ID = Integer.parseInt(line[0]);
+                peer.hostName = line[1];
+                peer.port = Integer.parseInt(line[2]);
+                peer.hasFile = Integer.parseInt(line[3]);
+                this.peers.add(peer);
+                /*this.peers[cnt] = new PeerInfo();
                 this.peers[cnt].ID = Integer.parseInt(line[0]);
                 this.peers[cnt].hostName = line[1];
                 this.peers[cnt].port = Integer.parseInt(line[2]);
-                this.peers[cnt].hasFile = Integer.parseInt(line[3]);
+                this.peers[cnt].hasFile = Integer.parseInt(line[3]);*/
                 cnt++;
             }
             System.out.println("Loaded "+cnt+" peers' information");
@@ -112,6 +120,8 @@ public class P2PFileProcess {
             System.out.println("common.cfg file not found");
             // Exception handling
         }
+
+        return this.peers;
     }
 
     public void DataGeneration(int ID) throws IOException {
@@ -129,15 +139,15 @@ public class P2PFileProcess {
             fileContent += String.join("", Collections.nCopies(mod, "1"));
         }
         // check ID and hasFile
-        for (int i = 0; i < this.peerNum; i++) {
-            if (ID == this.peers[i].ID){ // locate the peers by ID
+        for (int i = 0; i < peers.size(); i++) {
+            if (ID == peers.get(i).ID){ // locate the peers by ID
                 String workDir = System.getProperty("user.dir");
-                String peerFolder = workDir + File.separator + "peer_"+this.peers[i].ID+File.separator;
+                String peerFolder = workDir + File.separator + "peer_"+peers.get(i).ID+File.separator;
                 System.out.println("data file path:" + peerFolder);
 //                Files.createDirectories(Paths.get(peerFolder));
                 File dir = new File(peerFolder);
                 if (!dir.exists()) dir.mkdirs();// create dir if not exists.
-                if (this.peers[i].hasFile==1){ // check hasFile field
+                if (peers.get(i).hasFile==1){ // check hasFile field
                     try (FileWriter fileWriter = new FileWriter(peerFolder+this.FileName)) {
                         fileWriter.write(fileContent);
                     }
