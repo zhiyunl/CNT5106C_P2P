@@ -41,12 +41,12 @@ public class Client extends Thread {
             //get Input from standard input
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
             while (true) {
-                System.out.print("Hello, please input a sentence: ");
+                //System.out.print("Hello, please input a sentence: ");
                 //read a sentence from the standard input
                 //message send to the server
-                String message = bufferedReader.readLine();
+                //String message = bufferedReader.readLine();
                 //Send the sentence to the server
-                sendMessage(message);
+                //sendMessage(message);
                 //Receive the upperCase sentence from the server
                 //capitalized message read from the server
                 String MESSAGE = (String) in.readObject();
