@@ -1,106 +1,75 @@
 package com.company.client;
 
-import com.company.helper.ConstructHandshakeMsg;
+import com.company.helper.P2PMessageProcess;
 import com.company.helper.P2PFileProcess;
 
 import java.io.*;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.List;
+import java.util.Arrays;
 
 public class Client extends Thread {
-    private Socket requestSocket;           //socket connect to the server
-    private ObjectOutputStream out;         //stream write to the socket
-    private ObjectInputStream in;
+    private Socket connection;           //socket connect to the server
+    private ObjectInputStream in;	//stream read from the socket
+    private ObjectOutputStream out;    //stream write to the socket
+    private String state = "connection"; // the state of the program
     private P2PFileProcess.PeerInfo peerInfo;
     private int id;
+    private byte[] field;
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
 
-    public Client(P2PFileProcess.PeerInfo peerInfo, int id) {
+    Client(P2PFileProcess.PeerInfo peerInfo, int id, byte[] field) {
         this.peerInfo = peerInfo;
         this.id = id;
+        this.field = field;
     }
 
     public void run() {
         try {
             //create a socket to connect to the server
-            requestSocket = new Socket(peerInfo.hostName, peerInfo.port);
-            System.out.println("Connected to localhost in port " + peerInfo.port);
-            //initialize inputStream and outputStream
-            out = new ObjectOutputStream(requestSocket.getOutputStream());
+            connection = new Socket(peerInfo.hostName, peerInfo.port);
+            in = new ObjectInputStream(connection.getInputStream());
+            out = new ObjectOutputStream(connection.getOutputStream());
             out.flush();
-            in = new ObjectInputStream(requestSocket.getInputStream());
-            ConstructHandshakeMsg constructHandshakeMsg = new ConstructHandshakeMsg();
-            sendMessage(constructHandshakeMsg.constructHandshake(id));
+            System.out.println("Connected to localhost in port " + peerInfo.port);
+
+            //implement P2PMessageProcess to help us handle different message
+            P2PMessageProcess p2PMessageProcess = new P2PMessageProcess(id, field);
+            //send handshake message
+            p2PMessageProcess.sendHandShakeMsg(out);
+
             byte[] handshakeMsg = (byte[]) in.readObject();
-            if (constructHandshakeMsg.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && constructHandshakeMsg.getHandshakeId(handshakeMsg) == peerInfo.ID) {
+
+            //identify whether it is a right handshake
+            if (p2PMessageProcess.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && p2PMessageProcess.getHandshakeId(handshakeMsg) == peerInfo.ID) {
+                state = "handshake";
                 System.out.println("-----------------we have connected the right neighbour-----------------");
+                //send BitField
+                p2PMessageProcess.sendBitField(out);
             }
 
-            //get Input from standard input
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-            while (true) {
-                //System.out.print("Hello, please input a sentence: ");
-                //read a sentence from the standard input
-                //message send to the server
-                //String message = bufferedReader.readLine();
-                //Send the sentence to the server
-                //sendMessage(message);
-                //Receive the upperCase sentence from the server
-                //capitalized message read from the server
-                String MESSAGE = (String) in.readObject();
-                //show the message to the user
-                System.out.println("Receive message: " + MESSAGE);
+            //handle the actual message after handshake
+            if (state.equals("handshake")) {
+                p2PMessageProcess.handleActualMsg(in);
             }
+
         } catch (ConnectException e) {
             System.err.println("Connection refused. You need to initiate a server first.");
-        } catch (ClassNotFoundException e) {
-            System.err.println("Class not found");
         } catch (UnknownHostException unknownHost) {
             System.err.println("You are trying to connect to an unknown host!");
-        } catch (IOException ioException) {
+        } catch (IOException | ClassNotFoundException ioException) {
             ioException.printStackTrace();
         } finally {
             //Close connections
             try {
                 in.close();
                 out.close();
-                requestSocket.close();
+                connection.close();
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
         }
     }
-
-
-
-    private void sendMessage(String msg)
-    {
-        try{
-            //stream write the message
-            out.writeObject(msg);
-            out.flush();
-        }
-        catch(IOException ioException){
-            ioException.printStackTrace();
-        }
-    }
-
-
-    //send a message to the output stream
-    private void sendMessage(byte[] message)
-    {
-        try{
-            //stream write the message
-            out.writeObject(message);
-            out.flush();
-        }
-        catch(IOException ioException){
-            ioException.printStackTrace();
-        }
-    }
-
-
 
 }

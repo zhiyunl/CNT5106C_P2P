@@ -1,6 +1,6 @@
 package com.company.server;
 
-import com.company.helper.ConstructHandshakeMsg;
+import com.company.helper.P2PMessageProcess;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -8,19 +8,21 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 public class Server extends Thread {
-    private String message;    //message received from the client
-    private String MESSAGE;    //uppercase message send to the client
     private Socket connection;
     private ObjectInputStream in;	//stream read from the socket
     private ObjectOutputStream out;    //stream write to the socket
+    private String state = "connection"; // the state of the program
     private int no;		//The index number of the client
-    private int socketId;
+    private int id;
+    private byte[] field;
+
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
 
-    public Server(Socket connection, int no, int socketId) {
+    Server(Socket connection, int no, int id, byte[] field) {
         this.connection = connection;
         this.no = no;
-        this.socketId = socketId;
+        this.id = id;
+        this.field = field;
     }
 
     public void run() {
@@ -29,34 +31,30 @@ public class Server extends Thread {
             out = new ObjectOutputStream(connection.getOutputStream());
             out.flush();
             in = new ObjectInputStream(connection.getInputStream());
+
+            //implement P2PMessageProcess to help us handle different message
+            P2PMessageProcess p2PMessageProcess = new P2PMessageProcess(id, field);
+            //send handshake message
+            p2PMessageProcess.sendHandShakeMsg(out);
+
             byte[] handshakeMsg = (byte[]) in.readObject();
-            ConstructHandshakeMsg constructHandshakeMsg = new ConstructHandshakeMsg();
-            if (constructHandshakeMsg.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && constructHandshakeMsg.getHandshakeId(handshakeMsg) > socketId) {
+
+            //identify whether it is a right handshake
+            if (p2PMessageProcess.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && p2PMessageProcess.getHandshakeId(handshakeMsg) > id) {
+                state = "handshake";
                 System.out.println("-----------------we have received the request of handshake-----------------");
-                sendMessage(constructHandshakeMsg.constructHandshake(socketId));
+                p2PMessageProcess.sendBitField(out);
             }
 
-            try{
-                while(true)
-                {
-                    //receive the message sent from the client
-                    message = (String)in.readObject();
-                    //show the message to the user
-                    System.out.println("Receive message: " + message + " from client " + no);
-                    //Capitalize all letters in the message
-                    MESSAGE = message.toUpperCase();
-                    //send MESSAGE back to the client
-                    sendMessage(MESSAGE);
-                }
+            //handle the actual message after handshake
+            if (state.equals("handshake")) {
+                p2PMessageProcess.handleActualMsg(in);
             }
-            catch(ClassNotFoundException classnot){
-                System.err.println("Data received in unknown format");
-            }
-        }
-        catch(IOException | ClassNotFoundException ioException){
-            System.out.println("Disconnect with Client " + no);
-        }
-        finally{
+
+
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally{
             //Close connections
             try{
                 in.close();
@@ -66,32 +64,6 @@ public class Server extends Thread {
             catch(IOException ioException){
                 System.out.println("Disconnect with Client " + no);
             }
-        }
-    }
-
-    //send a message to the output stream
-    private void sendMessage(String msg)
-    {
-        try{
-            out.writeObject(msg);
-            out.flush();
-            System.out.println("Send message: " + msg + " to Client " + no);
-        }
-        catch(IOException ioException){
-            ioException.printStackTrace();
-        }
-    }
-
-    //send a message to the output stream
-    private void sendMessage(byte[] message)
-    {
-        try{
-            //stream write the message
-            out.writeObject(message);
-            out.flush();
-        }
-        catch(IOException ioException){
-            ioException.printStackTrace();
         }
     }
 

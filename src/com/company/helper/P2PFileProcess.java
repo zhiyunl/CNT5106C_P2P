@@ -13,8 +13,8 @@ public class P2PFileProcess {
     int UnchokingInterval;
     int OptimisticUnchokingInterval;
     String FileName;
-    int FileSize;
-    int PieceSize;
+    public int FileSize;
+    public int PieceSize;
     // peerInfo.cfg
     //int MAX_PEER_NUM =20; // maximum of object array to hold peers
     List<PeerInfo> peers;
