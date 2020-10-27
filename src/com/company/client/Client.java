@@ -1,13 +1,14 @@
 package com.company.client;
 
-import com.company.helper.P2PMessageProcess;
 import com.company.helper.P2PFileProcess;
+import com.company.helper.P2PMessageProcess;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 
 public class Client extends Thread {
     private Socket connection;           //socket connect to the server
