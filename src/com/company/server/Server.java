@@ -48,7 +48,7 @@ public class Server extends Thread {
 
             //handle the actual message after handshake
             if (state.equals("handshake")) {
-                p2PMessageProcess.handleActualMsg(in);
+                p2PMessageProcess.handleActualMsg(in, out);
             }
 
 

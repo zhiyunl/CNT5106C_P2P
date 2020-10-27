@@ -2,6 +2,7 @@ package com.company.client;
 
 import com.company.helper.P2PFileProcess;
 import com.company.helper.P2PMessageProcess;
+import com.company.helper.PeersBitfield;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -9,6 +10,7 @@ import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 public class Client extends Thread {
     private Socket connection;           //socket connect to the server
@@ -19,6 +21,7 @@ public class Client extends Thread {
     private int id;
     private byte[] field;
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
+    private PeersBitfield peersBitfield; // storing peers id and corresponding bitfield
 
     Client(P2PFileProcess.PeerInfo peerInfo, int id, byte[] field) {
         this.peerInfo = peerInfo;
@@ -50,9 +53,15 @@ public class Client extends Thread {
                 p2PMessageProcess.sendBitField(out);
             }
 
+            // create arraylist for storing peers id and corresponding bitfield
+            if (state.equals("handshake")) {
+                peersBitfield = new PeersBitfield(id, field);
+                System.out.println("created peer bitfield");
+            }
+
             //handle the actual message after handshake
             if (state.equals("handshake")) {
-                p2PMessageProcess.handleActualMsg(in);
+                p2PMessageProcess.handleActualMsg(in, out);
             }
 
         } catch (ConnectException e) {

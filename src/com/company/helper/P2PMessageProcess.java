@@ -3,11 +3,13 @@ package com.company.helper;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.Socket;
 
 public class P2PMessageProcess {
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
     private int id;
     private byte[] field;
+    private PeersBitfield peersBitfield;
 
     final int choke= 0;
     final int unchoke= 1;
@@ -78,11 +80,33 @@ public class P2PMessageProcess {
     }
 
     /**
+     * generate actual choke, unchoke, interested, not interested msg
+     * @param type one of the four types
+     *
+     */
+    public void sendActualMsg(int type, ObjectOutputStream out) {
+        byte[] message = new byte[5];
+        byte[] fieldLength = intToByteArray(field.length);
+
+        for (int i = 0; i < message.length; i++) {
+            if (i < 4) {
+                message[i] = fieldLength[i];
+            }
+            else {
+                message[i] = intToByteArray(type)[3];
+            }
+        }
+        sendMessage(message, out);
+    }
+
+    /**
      * handle actual message in this function
      * @param in input stream to receive message
      *
      */
-    public void handleActualMsg(ObjectInputStream in) {
+    public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out) throws IOException {
+        boolean flag;
+
         while(true)
         {
             //message received from the client
@@ -105,11 +129,37 @@ public class P2PMessageProcess {
                         break;
                     case have:
                         System.out.println("have time");
+                        // send an interested/non-interested message
+                        flag = false;
+                        for (int i = 0; i < field.length; i++) {
+                            if (message[i+5] == 1 && field[i] == 0) {
+                                sendActualMsg(interested, out);
+                                flag = true;
+                                break;
+                            }
+                        }
+                        if (!flag) {
+                            sendActualMsg(not_interested, out);
+                        }
                         break;
                     case bitfield:
-                        System.out.println("bitfield time");
+                        System.out.println("Received bitfield: ");
                         for (byte b : message) {
                             System.out.print(b + " ");
+                        }
+                        // add new entry to peersBitfield
+                        // peersBitfield.addNewEntry(发送方id, message);
+                        // send an interested/non-interested message
+                        flag = false;
+                        for (int i = 0; i < field.length; i++) {
+                            if (message[i+5] == 1 && field[i] == 0) {
+                                sendActualMsg(interested, out);
+                                flag = true;
+                                break;
+                            }
+                        }
+                        if (!flag) {
+                            sendActualMsg(not_interested, out);
                         }
                         break;
                     case request:
@@ -117,6 +167,8 @@ public class P2PMessageProcess {
                         break;
                     case piece:
                         System.out.println("piece time");
+                        // send non-interested message or not after receiving piece
+                        // TBD
                         break;
                     default: break;
                 }
@@ -132,7 +184,7 @@ public class P2PMessageProcess {
      * @param i input integer that we need to transfer
      * @return byte array
      */
-    private byte[] intToByteArray(int i) {
+    public static byte[] intToByteArray(int i) {
         byte[] result = new byte[4];
         result[0] = (byte)((i >> 24) & 0xFF);
         result[1] = (byte)((i >> 16) & 0xFF);
