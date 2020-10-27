@@ -16,12 +16,19 @@ public class Main {
         try {
             //get the number of pieces that we should cut.
             p2PFileProcess.CommonCfg();
-            int filePieces = p2PFileProcess.FileSize % p2PFileProcess.PieceSize == 0 ? p2PFileProcess.FileSize / p2PFileProcess.PieceSize : p2PFileProcess.FileSize / p2PFileProcess.PieceSize + 1;
+//            int filePieces = p2PFileProcess.FileSize % p2PFileProcess.PieceSize == 0 ? p2PFileProcess.FileSize / p2PFileProcess.PieceSize : p2PFileProcess.FileSize / p2PFileProcess.PieceSize + 1;
 
             //get all peers information
             List<P2PFileProcess.PeerInfo> peersInfo = p2PFileProcess.PeerInfoCfg();
+            // generate test data
+            p2PFileProcess.DataGeneration(id);
+            // load pieces from file into 2d byte array
+            p2PFileProcess.initPieces(id);
+            // combine all pieces and write into file
+            p2PFileProcess.combinePieces(id);
+
             int hasFile = 0;
-            byte[] field = new byte[filePieces];
+            byte[] field = new byte[p2PFileProcess.getTotalPieces()];
 
             //identify whether it has the whole file
             for (P2PFileProcess.PeerInfo peer : peersInfo) {
