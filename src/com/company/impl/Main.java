@@ -9,9 +9,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Main {
-    private static final int id = 1001;
 
-    private Main() {
+    private Main(int id) {
         P2PFileProcess p2PFileProcess = new P2PFileProcess();
 
         try {
@@ -51,7 +50,12 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        new Main();
+        // Use id as arguments to set peerProcess ID
+        if (args.length >= 1){
+            new Main(Integer.parseInt(args[0]));
+        }else{
+            new Main(1001); // default id is 1001
+        }
     }
 
 }

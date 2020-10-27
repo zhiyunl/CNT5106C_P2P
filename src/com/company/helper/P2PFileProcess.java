@@ -7,20 +7,23 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * File Processing and Logging.
+ */
 public class P2PFileProcess {
-    // common.cfg
+    // parameters for common.cfg
     int NumberOfPreferredNeighbors;
     int UnchokingInterval;
     int OptimisticUnchokingInterval;
     String FileName;
     public int FileSize;
     public int PieceSize;
-    // peerInfo.cfg
-    //int MAX_PEER_NUM =20; // maximum of object array to hold peers
-    List<PeerInfo> peers;
 
+    // parameters for peerInfo.cfg
+    List<PeerInfo> peers;
     int peerNum; // total # of valid peers
-    // LOG TYPE
+
+    //Constants for LOG TYPE
     final int LOG_CONNECTTO= 1;
     final int LOG_CONNECTFROM= 2;
     final int LOG_PREFER= 3;
@@ -33,23 +36,44 @@ public class P2PFileProcess {
     final int LOG_DOWNLOAD = 10;
     final int LOG_COMPLETE = 11;
 
-    // define a class struct for info
+    /**
+     * A struct for peer info
+     */
     public static class PeerInfo{
-        public int ID,port,hasFile;
+        public int ID,
+        port,
+        hasFile;
         public String hostName;
+
+        /**
+         * Instantiates a new Peer info.
+         */
         PeerInfo(){
 
         }
+
+        /**
+         * Instantiates a new Peer info.
+         *
+         * @param id   the id
+         * @param Port the port
+         * @param hasF the has f
+         * @param host the host
+         */
         PeerInfo(int id, int Port, int hasF, String host){
-            ID = id;
-            port = Port;
-            hasFile = hasF;
-            hostName = host;
+            this.ID = id;
+            this.port = Port;
+            this.hasFile = hasF;
+            this.hostName = host;
         }
     }
 
+    /**
+     * Read common.cfg into variables.
+     *
+     * @throws IOException the io exception
+     */
     public void CommonCfg() throws IOException {
-        // TODO read common.cfg
         // set working directory to current
         String workDir = System.getProperty("user.dir");
         String commonCfg = "Common.cfg";
@@ -81,18 +105,21 @@ public class P2PFileProcess {
             System.out.println("loaded "+cnt+" parameters");
         } catch (FileNotFoundException e) {
             System.out.println("common.cfg file not found");
-            // Exception handling
         }
     }
 
+    /**
+     * read PeerInfo.cfg.
+     *
+     * @return the proceeding peers' list
+     * @throws IOException the io exception
+     */
     public List<PeerInfo> PeerInfoCfg() throws IOException{
-        // TODO read PeerInfo.cfg
         this.peers = new LinkedList<>();
         String workDir = System.getProperty("user.dir");
         String peerInfoCfg = "PeerInfo.cfg";
         String absolutePath = workDir + File.separator + peerInfoCfg;
         System.out.println("Peer Info config file path:" + absolutePath);
-        // maximum peers are 20
 
         try (BufferedReader bReader = new BufferedReader(new FileReader(absolutePath))) {
             String str;
@@ -100,7 +127,7 @@ public class P2PFileProcess {
             String[] line;
             while ((str = bReader.readLine()) != null) {
                 line = str.split(" ");
-                // save peer info one by one into struct array
+                // save peer info one by one into linked list
                 PeerInfo peer = new PeerInfo();
                 peer.ID = Integer.parseInt(line[0]);
                 peer.hostName = line[1];
@@ -117,17 +144,21 @@ public class P2PFileProcess {
             System.out.println("Loaded "+cnt+" peers' information");
             this.peerNum = cnt;
         } catch (FileNotFoundException e) {
-            System.out.println("common.cfg file not found");
-            // Exception handling
+            System.out.println("PeerInfo.cfg file not found");
         }
 
         return this.peers;
     }
 
+    /**
+     *  Test File Generation.
+     *
+     * @param ID the peer Process ID to generate the file
+     * @throws IOException the io exception
+     */
     public void DataGeneration(int ID) throws IOException {
-        // TODO Data Generation
         //  use file size information in the common.cfg to generate file before every run
-        //  the logic is that : only peerProcess need to generate file for itself, (if hasFile)
+        //  only peerProcess need to generate file for itself, (if hasFile)
         int cnt = this.FileSize/20;
         // note below string is of fixed size 20 bytes.
         //String fileContent = "this is 20 bytes !!!".repeat(cnt);
@@ -162,8 +193,12 @@ public class P2PFileProcess {
         }
     }
 
+    /**
+     * Setup Log file and clean log.
+     *
+     * @param ID the peerProcess id to create the log
+     */
     public void LogSetup(int ID) {
-        // TODO Setup the Logger for each peer
         //  peerProcess create log file for itself.
         String workDir = System.getProperty("user.dir");
         String logPath = workDir+File.separator+"log_peer_"+ID+".log";
@@ -177,22 +212,29 @@ public class P2PFileProcess {
         }
     }
 
+    /**
+     * Write log into files for each peerProcess.
+     *
+     * @param ID1  the peerProcess id to write the log
+     * @param type the log type
+     * @param args the args for the log
+     *             In connect 1.to 2.from and 4.optimistic 5.unchoking 6.choking 8.interested 9.not interested.
+     *                   args is a int: ID2
+     *             In 3.preferred
+     *                   args is a array of int: preferred neighbors ID
+     *             In 7.HAVE
+     *                  args is [ID2, piece Number]
+     *             In 10.Download
+     *                  args is [ID2, piece Number, Total number of pieces]
+     *             In 11.Complete
+     *                  args is null
+     */
     public void Log(int ID1, int type, int ... args){
-        /** @param args
-        In connect 1.to 2.from and 4.optimistic 5.unchoking 6.choking 8.interested 9.not interested.
-        args is a int: ID2
-        In 3.preferred
-        args is a array of int: preferred neighbors ID
-        In 7.HAVE
-        args is [ID2, piece Number]
-        In 10.Download
-        args is [ID2, piece Number, Total number of pieces]
-        In 11.Complete
-        args is null
-         */
+        // get current working directory
         String workDir = System.getProperty("user.dir");
         String logPath = workDir+File.separator+"log_peer_"+ID1+".log";
         try (FileWriter fw = new FileWriter(logPath,true)) {
+            // get timestamp
             Timestamp ts = new Timestamp(System.currentTimeMillis());
             switch (type){
                 case LOG_CONNECTTO:
