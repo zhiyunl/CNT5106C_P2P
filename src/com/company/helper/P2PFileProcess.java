@@ -37,6 +37,15 @@ public class P2PFileProcess {
     final int LOG_COMPLETE = 11;
 
     /**
+     * Get the piece by index.
+     * @param pieceIndex the index for the piece
+     * @return the total number
+     */
+    public byte[] getPiece(int pieceIndex) {
+        return this.filePieces[pieceIndex];
+    }
+
+    /**
      * A struct for peer info
      */
     public static class PeerInfo {

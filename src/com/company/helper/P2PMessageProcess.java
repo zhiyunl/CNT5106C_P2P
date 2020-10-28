@@ -176,7 +176,13 @@ public class P2PMessageProcess {
                         }
                         break;
                     case request:
-                        System.out.println("request time");
+                        System.out.println("received request from client");
+                        // TODO parse the request and get the pieceIndex
+
+                        // send out piece
+                        int pieceIndex = 5;
+//                        P2PFileProcess p2pFile = new P2PFileProcess();
+//                        SendPiece.sendPiece(pieceIndex,out,p2pFile);
                         break;
                     case piece:
                         System.out.println("piece time");
