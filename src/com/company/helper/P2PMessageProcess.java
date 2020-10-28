@@ -1,5 +1,7 @@
 package com.company.helper;
 
+import com.company.impl.Main;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -9,7 +11,6 @@ public class P2PMessageProcess {
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
     private int id;
     private byte[] field;
-    private PeersBitfield peersBitfield;
 
     final int choke= 0;
     final int unchoke= 1;
@@ -104,8 +105,10 @@ public class P2PMessageProcess {
      * @param in input stream to receive message
      *
      */
-    public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out) throws IOException {
+    public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) throws IOException {
         boolean flag;
+        byte[] pieceID = new byte[4]; // received piece ID in have and piece
+        byte[] peerBitfield; // corresponding bitfield
 
         while(true)
         {
@@ -141,14 +144,24 @@ public class P2PMessageProcess {
                         if (!flag) {
                             sendActualMsg(not_interested, out);
                         }
+
+                        // update peer bitfield
+                        System.arraycopy(message, 5, pieceID, 0, 4);
+                        peerBitfield = Main.peersBitfield.get(peerID);
+                        peerBitfield[byteArrayToInt(pieceID)-1] = 1;
+
                         break;
                     case bitfield:
                         System.out.println("Received bitfield: ");
                         for (byte b : message) {
                             System.out.print(b + " ");
                         }
-                        // add new entry to peersBitfield
-                        // peersBitfield.addNewEntry(发送方id, message);
+
+                        // store peers bitfield
+                        byte[] peerField = new byte[field.length];
+                        System.arraycopy(message, 5, peerField, 0, field.length);
+                        Main.peersBitfield.put(peerID, peerField);
+
                         // send an interested/non-interested message
                         flag = false;
                         for (int i = 0; i < field.length; i++) {
@@ -167,8 +180,26 @@ public class P2PMessageProcess {
                         break;
                     case piece:
                         System.out.println("piece time");
+                        // update this bitfield
+                        System.arraycopy(message, 5, pieceID, 0, 4);
+                        this.field[byteArrayToInt(pieceID)-1] = 1;
                         // send non-interested message or not after receiving piece
-                        // TBD
+                        flag = false;
+                        for (int i = 1001; i <= Main.peersBitfield.size(); i++) {
+                            peerBitfield = Main.peersBitfield.get(i);
+                            for (int j = 0; j < field.length; j++) {
+                                if (peerBitfield[j] == 1 && field[j] == 0) {
+                                    flag = true;
+                                    break;
+                                }
+                            }
+                            if (flag == false) {
+                                // send non-interested to peer i -- TBD
+                                // sendActualMsg(not_interested, out);
+                            }
+                        }
+
+
                         break;
                     default: break;
                 }
