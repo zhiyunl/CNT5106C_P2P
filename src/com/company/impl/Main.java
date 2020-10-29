@@ -6,9 +6,13 @@ import com.company.server.ServerListener;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Main {
+
+    public static Map<Integer, byte[]> peersBitfield = new HashMap<>(); // hashmap for storing peers id and corresponding bitfield
 
     private Main(int id) {
         P2PFileProcess p2PFileProcess = new P2PFileProcess();

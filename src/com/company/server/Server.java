@@ -38,6 +38,7 @@ public class Server extends Thread {
             p2PMessageProcess.sendHandShakeMsg(out);
 
             byte[] handshakeMsg = (byte[]) in.readObject();
+            int peerID = p2PMessageProcess.getHandshakeId(handshakeMsg);
 
             //identify whether it is a right handshake
             if (p2PMessageProcess.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && p2PMessageProcess.getHandshakeId(handshakeMsg) > id) {
@@ -48,7 +49,7 @@ public class Server extends Thread {
 
             //handle the actual message after handshake
             if (state.equals("handshake")) {
-                p2PMessageProcess.handleActualMsg(in, out);
+                p2PMessageProcess.handleActualMsg(in, out, peerID);
             }
 
 
