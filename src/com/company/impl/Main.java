@@ -2,6 +2,7 @@ package com.company.impl;
 
 import com.company.client.ClientListener;
 import com.company.helper.P2PFileProcess;
+import com.company.peer.PeerListener;
 import com.company.server.ServerListener;
 
 import java.io.IOException;
@@ -12,7 +13,7 @@ import java.util.Map;
 
 public class Main {
 
-    public static Map<Integer, byte[]> peersBitfield = new HashMap<>(); // hashmap for storing peers id and corresponding bitfield
+    public static Map<Integer, byte[]> peersBitField = new HashMap<>(); // HashMap for storing peers id and corresponding bitfield
 
     private Main(int id) {
         P2PFileProcess p2PFileProcess = new P2PFileProcess();
@@ -25,11 +26,11 @@ public class Main {
             //get all peers information
             List<P2PFileProcess.PeerInfo> peersInfo = p2PFileProcess.PeerInfoCfg();
             // generate test data
-            p2PFileProcess.DataGeneration(id);
+            //p2PFileProcess.DataGeneration(id);
             // load pieces from file into 2d byte array
-            p2PFileProcess.initPieces(id);
+            //p2PFileProcess.initPieces(id);
             // combine all pieces and write into file
-            p2PFileProcess.combinePieces(id);
+            //p2PFileProcess.combinePieces(id);
 
             int hasFile = 0;
             byte[] field = new byte[p2PFileProcess.getTotalPieces()];
@@ -51,10 +52,8 @@ public class Main {
             }
 
             //create server and client thread for this peer
-            ServerListener serverListener = new ServerListener(peersInfo, id, field);
-            serverListener.start();
-            ClientListener clientListener = new ClientListener(peersInfo, id, field);
-            clientListener.start();
+            PeerListener peerListener = new PeerListener(peersInfo, id, field);
+            peerListener.start();
         } catch (IOException e) {
             e.printStackTrace();
         }

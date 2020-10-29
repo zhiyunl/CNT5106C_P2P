@@ -12,7 +12,7 @@ public class P2PMessageProcess {
     private int id;
     private byte[] field;
 
-    final int choke= 0;
+    private static final int MSG_CHOKE= 0;
     final int unchoke= 1;
     final int interested= 2;
     final int not_interested= 3;
@@ -118,7 +118,7 @@ public class P2PMessageProcess {
                 int type = message[4];
 
                 switch (type){
-                    case choke:
+                    case MSG_CHOKE:
                         System.out.println("choke time");
                         break;
                     case unchoke:
@@ -147,7 +147,7 @@ public class P2PMessageProcess {
 
                         // update peer bitfield
                         System.arraycopy(message, 5, pieceID, 0, 4);
-                        peerBitfield = Main.peersBitfield.get(peerID);
+                        peerBitfield = Main.peersBitField.get(peerID);
                         peerBitfield[byteArrayToInt(pieceID)-1] = 1;
 
                         break;
@@ -160,7 +160,7 @@ public class P2PMessageProcess {
                         // store peers bitfield
                         byte[] peerField = new byte[field.length];
                         System.arraycopy(message, 5, peerField, 0, field.length);
-                        Main.peersBitfield.put(peerID, peerField);
+                        Main.peersBitField.put(peerID, peerField);
 
                         // send an interested/non-interested message
                         flag = false;
@@ -191,8 +191,8 @@ public class P2PMessageProcess {
                         this.field[byteArrayToInt(pieceID)-1] = 1;
                         // send non-interested message or not after receiving piece
                         flag = false;
-                        for (int i = 1001; i <= Main.peersBitfield.size(); i++) {
-                            peerBitfield = Main.peersBitfield.get(i);
+                        for (Integer key : Main.peersBitField.keySet()) {
+                            peerBitfield = Main.peersBitField.get(key);
                             for (int j = 0; j < field.length; j++) {
                                 if (peerBitfield[j] == 1 && field[j] == 0) {
                                     flag = true;
@@ -204,7 +204,6 @@ public class P2PMessageProcess {
                                 // sendActualMsg(not_interested, out);
                             }
                         }
-
 
                         break;
                     default: break;

@@ -12,7 +12,6 @@ public class Server extends Thread {
     private ObjectInputStream in;	//stream read from the socket
     private ObjectOutputStream out;    //stream write to the socket
     private String state = "connection"; // the state of the program
-    private int no;		//The index number of the client
     private int id;
     private byte[] field;
 
@@ -20,12 +19,11 @@ public class Server extends Thread {
 
     Server(Socket connection, int no, int id, byte[] field) {
         this.connection = connection;
-        this.no = no;
         this.id = id;
         this.field = field;
     }
 
-    public void run() {
+   /* public void run() {
         try{
             //initialize Input and Output streams
             out = new ObjectOutputStream(connection.getOutputStream());
@@ -63,9 +61,9 @@ public class Server extends Thread {
                 connection.close();
             }
             catch(IOException ioException){
-                System.out.println("Disconnect with Client " + no);
+                ioException.printStackTrace();
             }
         }
-    }
+    }*/
 
 }

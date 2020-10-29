@@ -17,7 +17,7 @@ public class ServerListener extends Thread{
         this.field = field;
     }
 
-    public void run() {
+   /* public void run() {
         //get the port that we should connect
         int sPort = 0;
         for (P2PFileProcess.PeerInfo peerInfo : peersInfo) {
@@ -41,5 +41,5 @@ public class ServerListener extends Thread{
             e.printStackTrace();
         }
 
-    }
+    }*/
 }

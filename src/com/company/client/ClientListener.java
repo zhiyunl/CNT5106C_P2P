@@ -15,7 +15,7 @@ public class ClientListener extends Thread {
         this.field = field;
     }
 
-    public void run() {
+   /* public void run() {
         //connect with peers whose id is smaller than itself
         for (P2PFileProcess.PeerInfo peerInfo : peersInfo) {
             if (peerInfo.ID >= id) {
@@ -23,6 +23,6 @@ public class ClientListener extends Thread {
             }
             new Client(peerInfo, id, field).start();
         }
-    }
+    }*/
 
 }

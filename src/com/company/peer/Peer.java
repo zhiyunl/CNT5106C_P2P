@@ -1,8 +1,6 @@
-package com.company.client;
-
+package com.company.peer;
 import com.company.helper.P2PFileProcess;
 import com.company.helper.P2PMessageProcess;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -10,32 +8,43 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-public class Client extends Thread {
-    private Socket connection;           //socket connect to the server
+public class Peer extends Thread {
+    private Socket connection;
     private ObjectInputStream in;	//stream read from the socket
     private ObjectOutputStream out;    //stream write to the socket
     private String state = "connection"; // the state of the program
-    private P2PFileProcess.PeerInfo peerInfo;
+    private P2PFileProcess.PeerInfo peerInfo = null;
     private int id;
     private byte[] field;
+
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
 
-    Client(P2PFileProcess.PeerInfo peerInfo, int id, byte[] field) {
-        this.peerInfo = peerInfo;
+    Peer(Socket connection, int id, byte[] field) {
+        this.connection = connection;
         this.id = id;
         this.field = field;
     }
 
-   /* public void run() {
-        try {
-            //create a socket to connect to the server
-            connection = new Socket(peerInfo.hostName, peerInfo.port);
-            in = new ObjectInputStream(connection.getInputStream());
-            out = new ObjectOutputStream(connection.getOutputStream());
-            out.flush();
-            System.out.println("Connected to localhost in port " + peerInfo.port);
+    Peer(Socket connection, int id, byte[] field, P2PFileProcess.PeerInfo peerInfo) {
+        this.connection = connection;
+        this.id = id;
+        this.field = field;
+        this.peerInfo = peerInfo;
+    }
 
-            //implement P2PMessageProcess to help us handle different message
+    public void run() {
+        try {
+            if (peerInfo != null) {
+                out = new ObjectOutputStream(connection.getOutputStream());
+                out.flush();
+                in = new ObjectInputStream(connection.getInputStream());
+            }
+            else {
+                in = new ObjectInputStream(connection.getInputStream());
+                out = new ObjectOutputStream(connection.getOutputStream());
+                out.flush();
+            }
+
             P2PMessageProcess p2PMessageProcess = new P2PMessageProcess(id, field);
             //send handshake message
             p2PMessageProcess.sendHandShakeMsg(out);
@@ -44,7 +53,7 @@ public class Client extends Thread {
             int peerID = p2PMessageProcess.getHandshakeId(handshakeMsg);
 
             //identify whether it is a right handshake
-            if (p2PMessageProcess.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && p2PMessageProcess.getHandshakeId(handshakeMsg) == peerInfo.ID) {
+            if (p2PMessageProcess.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && (peerInfo == null || peerInfo.ID == peerID)) {
                 state = "handshake";
                 System.out.println("-----------------we have connected the right neighbour-----------------");
                 //send BitField
@@ -72,6 +81,6 @@ public class Client extends Thread {
                 ioException.printStackTrace();
             }
         }
-    }*/
+    }
 
 }
