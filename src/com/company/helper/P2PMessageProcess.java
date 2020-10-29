@@ -83,8 +83,9 @@ public class P2PMessageProcess {
     }
 
     /**
-     * generate actual choke, unchoke, interested, not interested msg
+     * generate and send actual choke, unchoke, interested, not interested msg
      * @param type one of the four types
+     * @param out output stream to send message
      *
      */
     public void sendActualMsg(int type, ObjectOutputStream out) {
@@ -103,8 +104,31 @@ public class P2PMessageProcess {
     }
 
     /**
+     * decide interested to the peer or not
+     * @param message message received from peer
+     * @param out output stream to send message
+     *
+     */
+    public void interestOrNot(byte[] message, ObjectOutputStream out) {
+        boolean flag;
+        flag = false;
+        for (int i = 0; i < field.length; i++) {
+            if (message[i] == 1 && field[i] == 0) {
+                sendActualMsg(MSG_INTERESTED, out);
+                flag = true;
+                break;
+            }
+        }
+        if (!flag) {
+            sendActualMsg(MSG_NOT_INTERESTED, out);
+        }
+    }
+
+    /**
      * handle actual message in this function
      * @param in input stream to receive message
+     * @param out output stream to send message
+     * @param peerID peer ID
      *
      */
     public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) throws IOException {
@@ -134,24 +158,13 @@ public class P2PMessageProcess {
                         break;
                     case MSG_HAVE:
                         System.out.println("have time");
-                        // send an interested/non-interested message
-                        flag = false;
-                        for (int i = 0; i < field.length; i++) {
-                            if (message[i+5] == 1 && field[i] == 0) {
-                                sendActualMsg(MSG_INTERESTED, out);
-                                flag = true;
-                                break;
-                            }
-                        }
-                        if (!flag) {
-                            sendActualMsg(MSG_NOT_INTERESTED, out);
-                        }
-
                         // update peer bitfield
                         System.arraycopy(message, 5, pieceID, 0, 4);
                         peerBitfield = Main.peersBitField.get(peerID);
                         peerBitfield[byteArrayToInt(pieceID)-1] = 1;
 
+                        // send an interested/non-interested message
+                        interestOrNot(Main.peersBitField.get(peerID), out);
                         break;
                     case MSG_BIT_FIELD:
                         System.out.println("Received bitfield: ");
@@ -165,17 +178,7 @@ public class P2PMessageProcess {
                         Main.peersBitField.put(peerID, peerField);
 
                         // send an interested/non-interested message
-                        flag = false;
-                        for (int i = 0; i < field.length; i++) {
-                            if (message[i+5] == 1 && field[i] == 0) {
-                                sendActualMsg(MSG_INTERESTED, out);
-                                flag = true;
-                                break;
-                            }
-                        }
-                        if (!flag) {
-                            sendActualMsg(MSG_NOT_INTERESTED, out);
-                        }
+                        interestOrNot(Main.peersBitField.get(peerID), out);
                         break;
                     case MSG_REQUEST:
                         System.out.println("received request from client");
@@ -201,12 +204,13 @@ public class P2PMessageProcess {
                                     break;
                                 }
                             }
-                            if (flag == false) {
-                                // send non-interested to peer i -- TBD
-                                // sendActualMsg(not_interested, out);
+                            if (!flag) {
+                                // send non-interested to peer i
+                                sendActualMsg(MSG_NOT_INTERESTED, peerMap.get(key).getOut());
                             }
                         }
-
+                        // send have to all neighbors
+                        // TBD
                         break;
                     default: break;
                 }
