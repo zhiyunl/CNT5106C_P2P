@@ -26,11 +26,11 @@ public class Main {
             //get all peers information
             List<P2PFileProcess.PeerInfo> peersInfo = p2PFileProcess.PeerInfoCfg();
             // generate test data
-            //p2PFileProcess.DataGeneration(id);
+            p2PFileProcess.DataGeneration(id);
             // load pieces from file into 2d byte array
-            //p2PFileProcess.initPieces(id);
+            p2PFileProcess.initPieces(id);
             // combine all pieces and write into file
-            //p2PFileProcess.combinePieces(id);
+            p2PFileProcess.combinePieces(id);
 
             int hasFile = 0;
             byte[] field = new byte[p2PFileProcess.getTotalPieces()];
