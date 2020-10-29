@@ -1,8 +1,8 @@
 package com.company.impl;
 
+import com.company.client.ClientListener;
 import com.company.helper.P2PFileProcess;
 import com.company.server.ServerListener;
-import com.company.client.ClientListener;
 
 import java.io.IOException;
 import java.util.Arrays;
