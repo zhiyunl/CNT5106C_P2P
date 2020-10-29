@@ -1,25 +1,27 @@
 package com.company.helper;
 
 import com.company.impl.Main;
+import com.company.peer.Peer;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class P2PMessageProcess {
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
     private int id;
     private byte[] field;
-
+    public static Map<Integer, Peer> peerMap = new HashMap<>();
     private static final int MSG_CHOKE= 0;
-    final int unchoke= 1;
-    final int interested= 2;
-    final int not_interested= 3;
-    final int have= 4;
-    final int bitfield= 5;
-    final int request= 6;
-    final int piece = 7;
+    private static final int MSG_UN_CHOKE= 1;
+    private static final int MSG_INTERESTED= 2;
+    private static final int MSG_NOT_INTERESTED= 3;
+    private static final int MSG_HAVE= 4;
+    private static final int MSG_BIT_FIELD= 5;
+    private static final int MSG_REQUEST= 6;
+    private static final int MSG_PIECE = 7;
 
     public P2PMessageProcess(int id, byte[] field) {
         this.id = id;
@@ -121,28 +123,28 @@ public class P2PMessageProcess {
                     case MSG_CHOKE:
                         System.out.println("choke time");
                         break;
-                    case unchoke:
+                    case MSG_UN_CHOKE:
                         System.out.println("unchoke time");
                         break;
-                    case interested:
+                    case MSG_INTERESTED:
                         System.out.println("interested time");
                         break;
-                    case not_interested:
+                    case MSG_NOT_INTERESTED:
                         System.out.println("not_interested time");
                         break;
-                    case have:
+                    case MSG_HAVE:
                         System.out.println("have time");
                         // send an interested/non-interested message
                         flag = false;
                         for (int i = 0; i < field.length; i++) {
                             if (message[i+5] == 1 && field[i] == 0) {
-                                sendActualMsg(interested, out);
+                                sendActualMsg(MSG_INTERESTED, out);
                                 flag = true;
                                 break;
                             }
                         }
                         if (!flag) {
-                            sendActualMsg(not_interested, out);
+                            sendActualMsg(MSG_NOT_INTERESTED, out);
                         }
 
                         // update peer bitfield
@@ -151,7 +153,7 @@ public class P2PMessageProcess {
                         peerBitfield[byteArrayToInt(pieceID)-1] = 1;
 
                         break;
-                    case bitfield:
+                    case MSG_BIT_FIELD:
                         System.out.println("Received bitfield: ");
                         for (byte b : message) {
                             System.out.print(b + " ");
@@ -166,16 +168,16 @@ public class P2PMessageProcess {
                         flag = false;
                         for (int i = 0; i < field.length; i++) {
                             if (message[i+5] == 1 && field[i] == 0) {
-                                sendActualMsg(interested, out);
+                                sendActualMsg(MSG_INTERESTED, out);
                                 flag = true;
                                 break;
                             }
                         }
                         if (!flag) {
-                            sendActualMsg(not_interested, out);
+                            sendActualMsg(MSG_NOT_INTERESTED, out);
                         }
                         break;
-                    case request:
+                    case MSG_REQUEST:
                         System.out.println("received request from client");
                         // TODO parse the request and get the pieceIndex
 
@@ -184,7 +186,7 @@ public class P2PMessageProcess {
 //                        P2PFileProcess p2pFile = new P2PFileProcess();
 //                        SendPiece.sendPiece(pieceIndex,out,p2pFile);
                         break;
-                    case piece:
+                    case MSG_PIECE:
                         System.out.println("piece time");
                         // update this bitfield
                         System.arraycopy(message, 5, pieceID, 0, 4);

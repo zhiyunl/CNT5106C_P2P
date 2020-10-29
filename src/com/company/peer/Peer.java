@@ -58,6 +58,9 @@ public class Peer extends Thread {
                 System.out.println("-----------------we have connected the right neighbour-----------------");
                 //send BitField
                 p2PMessageProcess.sendBitField(out);
+                //add peer to the peer map in order to send not interested to all neighbours
+                P2PMessageProcess.peerMap.put(peerID, this);
+                System.out.println("the peer " + id + " " + "can send message to " + peerID + " by this out channel");
             }
 
             //handle the actual message after handshake
@@ -81,6 +84,10 @@ public class Peer extends Thread {
                 ioException.printStackTrace();
             }
         }
+    }
+
+    public ObjectOutputStream getOut() {
+        return out;
     }
 
 }
