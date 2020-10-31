@@ -1,9 +1,8 @@
 package com.company.impl;
 
-import com.company.client.ClientListener;
 import com.company.helper.P2PFileProcess;
+import com.company.helper.P2PMessageProcess;
 import com.company.peer.PeerListener;
-import com.company.server.ServerListener;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -29,25 +28,31 @@ public class Main {
             p2PFileProcess.DataGeneration(id);
             // load pieces from file into 2d byte array
             p2PFileProcess.initPieces(id);
-            // combine all pieces and write into file
-            p2PFileProcess.combinePieces(id);
+            // init Log
+            p2PFileProcess.LogSetup(id);
 
-            int hasFile = 0;
-            byte[] field = new byte[p2PFileProcess.getTotalPieces()];
+//            int hasFile = 0;
+            byte[] field = new byte[P2PFileProcess.getTotalPieces()];
 
-            //identify whether it has the whole file
-            for (P2PFileProcess.PeerInfo peer : peersInfo) {
-                if (peer.ID == id) {
-                    hasFile = peer.hasFile;
-                    break;
-                }
-            }
-
-            //create bit field array at the initial stage
-            if (hasFile == 0) {
+//            //identify whether it has the whole file
+//            for (P2PFileProcess.PeerInfo peer : peersInfo) {
+//                if (peer.ID == id) {
+//                    hasFile = peer.hasFile;
+//                    break;
+//                }
+//            }
+//
+//            //create bit field array at the initial stage
+//            if (hasFile == 0) {
+//                Arrays.fill(field, (byte) 0);
+//            }
+//            else {
+//                Arrays.fill(field, (byte) 1);
+//            }
+            int myIndex = P2PFileProcess.getPeerIndexByID(id);
+            if (peersInfo.get(myIndex).hasFile == 0){
                 Arrays.fill(field, (byte) 0);
-            }
-            else {
+            }else{
                 Arrays.fill(field, (byte) 1);
             }
 

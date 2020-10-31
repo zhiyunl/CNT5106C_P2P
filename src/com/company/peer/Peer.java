@@ -61,6 +61,10 @@ public class Peer extends Thread {
                 //add peer to the peer map in order to send not interested to all neighbours
                 P2PMessageProcess.peerMap.put(peerID, this);
                 System.out.println("the peer " + id + " " + "can send message to " + peerID + " by this out channel");
+
+                // test send piece
+                byte[] pieceID = P2PMessageProcess.intToByteArray(5);
+                p2PMessageProcess.sendPiece(pieceID,out);
             }
 
             //handle the actual message after handshake

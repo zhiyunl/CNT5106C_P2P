@@ -14,14 +14,14 @@ public class P2PMessageProcess {
     private int id;
     private byte[] field;
     public static Map<Integer, Peer> peerMap = new HashMap<>();
-    private static final int MSG_CHOKE= 0;
-    private static final int MSG_UN_CHOKE= 1;
-    private static final int MSG_INTERESTED= 2;
-    private static final int MSG_NOT_INTERESTED= 3;
-    private static final int MSG_HAVE= 4;
-    private static final int MSG_BIT_FIELD= 5;
-    private static final int MSG_REQUEST= 6;
-    private static final int MSG_PIECE = 7;
+    private static final int MSG_CHOKE= 1;
+    private static final int MSG_UN_CHOKE= 2;
+    private static final int MSG_INTERESTED= 3;
+    private static final int MSG_NOT_INTERESTED= 4;
+    private static final int MSG_HAVE= 5;
+    private static final int MSG_BIT_FIELD= 6;
+    private static final int MSG_REQUEST= 7;
+    private static final int MSG_PIECE = 9;
 
     public P2PMessageProcess(int id, byte[] field) {
         this.id = id;
@@ -65,7 +65,7 @@ public class P2PMessageProcess {
 
         byte[] result = new byte[field.length + 5];
         byte[] fieldLength = intToByteArray(field.length);
-        byte[] type = intToByteArray(5);
+        byte[] type = intToByteArray(MSG_BIT_FIELD);
 
         for (int i = 0; i < result.length; i++) {
             if (i < 4) {
@@ -80,6 +80,27 @@ public class P2PMessageProcess {
         }
 
         sendMessage(result, out);
+    }
+
+    /**
+     * send piece to another peer
+     * @param pieceIndex index of the requested piece
+     *
+     */
+    public void sendPiece(byte[] pieceIndex, ObjectOutputStream out){
+        // TODO check piece index is valid
+        // msg = length+type+[index+piece]
+        byte[] msg = new byte[5+4+P2PFileProcess.PieceSize];
+        byte[] msgLength = intToByteArray(msg.length);
+        byte type = intToByteArray(MSG_PIECE)[3]; // only last byte
+
+        // arraycopy args: source array, start point, des array, start point, length
+        System.arraycopy(msgLength,0,msg,0,4); // 1-4 bytes: msg length
+        msg[4] = type; // 5th byte: msg type
+        System.arraycopy(pieceIndex,0,msg,5,4);// 6-10 bytes: pieceIndex
+        // 9 - remaining bytes: piece
+        System.arraycopy(P2PFileProcess.getPiece(byteArrayToInt(pieceIndex)),0,msg,9,P2PFileProcess.PieceSize);
+        sendMessage(msg, out);
     }
 
     /**
@@ -145,19 +166,27 @@ public class P2PMessageProcess {
 
                 switch (type){
                     case MSG_CHOKE:
-                        System.out.println("choke time");
+                        System.out.println("received choke, parse and update choke list");
+                        // TODO parse CHOKE msg
+
                         break;
                     case MSG_UN_CHOKE:
-                        System.out.println("unchoke time");
+                        System.out.println("received unchoke, parse it and update");
+                        // TODO parse UNCHOKE msg
+
                         break;
                     case MSG_INTERESTED:
                         System.out.println("interested time");
+                        // TODO parse INTEREST msg
+
                         break;
                     case MSG_NOT_INTERESTED:
                         System.out.println("not_interested time");
+                        // TODO parse NOT_INTEREST msg
+
                         break;
                     case MSG_HAVE:
-                        System.out.println("have time");
+                        System.out.println("received have msg, update bit field and send interest/not back");
                         // update peer bitfield
                         System.arraycopy(message, 5, pieceID, 0, 4);
                         peerBitfield = Main.peersBitField.get(peerID);
@@ -181,16 +210,23 @@ public class P2PMessageProcess {
                         interestOrNot(Main.peersBitField.get(peerID), out);
                         break;
                     case MSG_REQUEST:
-                        System.out.println("received request from client");
+                        System.out.println("received request, parse and send piece back.");
                         // TODO parse the request and get the pieceIndex
 
                         // send out piece
-                        int pieceIndex = 5;
-//                        P2PFileProcess p2pFile = new P2PFileProcess();
-//                        SendPiece.sendPiece(pieceIndex,out,p2pFile);
+                        pieceID = intToByteArray(5);
+                        sendPiece(pieceID,out);
                         break;
                     case MSG_PIECE:
-                        System.out.println("piece time");
+                        System.out.println("received piece msg, save it and update bit field.");
+                        // TODO save piece
+
+                        System.arraycopy(message,5,pieceID,0,4); // get pieceID (byte[])
+                        // save the piece into filePieces by index
+                        System.arraycopy(message,9,P2PFileProcess.filePieces[byteArrayToInt(pieceID)],0,P2PFileProcess.PieceSize);
+                        // test combinePieces
+                        P2PFileProcess.combinePieces(id);
+
                         // update this bitfield
                         System.arraycopy(message, 5, pieceID, 0, 4);
                         this.field[byteArrayToInt(pieceID)-1] = 1;
@@ -211,8 +247,17 @@ public class P2PMessageProcess {
                         }
                         // send have to all neighbors
                         // TBD
+
+                        // get current # of pieces
+                        int sum = 0;
+                        for (byte a : this.field){
+                            sum+=a;
+                        }
+                        P2PFileProcess.Log(id,P2PFileProcess.LOG_DOWNLOAD,peerID,byteArrayToInt(pieceID),sum);
                         break;
-                    default: break;
+                    default:
+                        System.out.println("default msg type, wrong!");
+                        break;
                 }
 
             } catch (IOException | ClassNotFoundException e) {
@@ -285,6 +330,7 @@ public class P2PMessageProcess {
         for (byte b : field) {
             if (b == 1) {
                 result = true;
+                break;
             }
         }
 
