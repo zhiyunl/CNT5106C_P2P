@@ -85,28 +85,22 @@ public class P2PFileProcess {
      */
     public void initPieces(int ID) throws IOException {
         filePieces = new byte[getTotalPieces()][PieceSize];
-        // check ID and hasFile
-        for (int i = 0; i < peers.size(); i++) {
-            if (ID == peers.get(i).ID) { // locate the peers by ID
-                String workDir = System.getProperty("user.dir");
-                String peerFolder = workDir + File.separator + "peer_" + peers.get(i).ID + File.separator;
-                System.out.println("load data file path:" + peerFolder);
-                if (peers.get(i).hasFile == 1) { // check hasFile field
-                    byte[] files = Files.readAllBytes(Paths.get(peerFolder + FileName));
-                    // turn 1d into 2d byte array
-                    int total = getTotalPieces();
-                    for (int j = 0; j < total - 1; j++) {
-                        filePieces[j] = Arrays.copyOfRange(files, j * PieceSize, (j + 1) * PieceSize);
-                    }
-                    filePieces[total - 1] = Arrays.copyOfRange(files, (total - 1) * PieceSize, files.length);
-                } else {
-                    System.out.println("This peer does not have file!");
+        int peerIndex = P2PFileProcess.getPeerIndexByID(ID);
+        if (peerIndex!=-1){
+            String peerFolder = P2PFileProcess.initPeerFolder(ID);
+            if (peers.get(peerIndex).hasFile == 1) { // check hasFile field
+                byte[] files = Files.readAllBytes(Paths.get(peerFolder + FileName));
+                // turn 1d into 2d byte array
+                int total = getTotalPieces();
+                for (int j = 0; j < total - 1; j++) {
+//                    System.arraycopy(files,j * PieceSize,filePieces[j],0,PieceSize);
+                    filePieces[j] = Arrays.copyOfRange(files, j * PieceSize, (j + 1) * PieceSize);
                 }
-                break;
+//                System.arraycopy(files,(total - 1) * PieceSize, filePieces[total-1],0,files.length- (total - 1)* PieceSize);
+                filePieces[total - 1] = Arrays.copyOfRange(files, (total - 1) * PieceSize, files.length);
             }
-            if (i == peers.size() - 1) {
-                System.out.println("peer ID Not Found!");
-            }
+        }else{
+            System.out.println("peer ID Not Found!");
         }
     }
     /**

@@ -8,11 +8,11 @@ Put cfg files under *$PROJ_DIR$* directory, cd to *$PROJ_DIR$*. e.g CNT5106C_P2P
 To build, use
 ```
 find . -name "*.java" > build.txt
-javac @build.txt
+javac -d . @build.txt
 ```
 To Run, use
 ```
-java -cp ./src com.company.impl.Main 1001
+java com.company.impl.Main 1001
 ```
 Here 1001 is the ID for the peer.
 
