@@ -26,6 +26,8 @@ public class P2PMessageProcess {
     public P2PMessageProcess(int id, byte[] field) {
         this.id = id;
         this.field = field;
+        sendActualMsg(MSG_NOT_INTERESTED, peerMap.get(1002).getOut());
+        sendActualMsg(MSG_NOT_INTERESTED, peerMap.get(1003).getOut());
     }
 
     /**
@@ -105,6 +107,8 @@ public class P2PMessageProcess {
     /**
      * handle actual message in this function
      * @param in input stream to receive message
+     * @param out out stream to output message
+     * @param peerID peer ID
      *
      */
     public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) throws IOException {
