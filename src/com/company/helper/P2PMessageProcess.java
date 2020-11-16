@@ -2,21 +2,18 @@ package com.company.helper;
 
 import com.company.impl.Main;
 import com.company.peer.Peer;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class P2PMessageProcess {
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
-    private int id;
-    private byte[] field;
-    public static Map<Integer, Peer> peerMap = new HashMap<>();
-    public static Map<Integer, List<Integer>> interestingMap = new HashMap<>();
-    public static Map<Integer, List<Integer>> requestingMap = new HashMap<>();
+    public static int id;
+    private Map<Integer, Peer> peerMap = new HashMap<>();
+    private Map<Integer, List<Integer>> interestingMap = new HashMap<>();
     private static final int MSG_CHOKE= 0;
     private static final int MSG_UN_CHOKE= 1;
     private static final int MSG_INTERESTED= 2;
@@ -25,10 +22,11 @@ public class P2PMessageProcess {
     private static final int MSG_BIT_FIELD= 5;
     private static final int MSG_REQUEST= 6;
     private static final int MSG_PIECE = 7;
+    private static final int MSG_FINISH = 8;
+    private static final int MSG_ALL_FINISH = 9;
 
-    public P2PMessageProcess(int id, byte[] field) {
-        this.id = id;
-        this.field = field;
+    public P2PMessageProcess(int id) {
+        P2PMessageProcess.id = id;
     }
 
     /**
@@ -57,6 +55,15 @@ public class P2PMessageProcess {
     }
 
     /**
+     * initialize peer map
+     * @param peerId ID of peer
+     * @param peer object of peer
+     */
+    public void constructPeerMap(int peerId, Peer peer) {
+       peerMap.put(peerId, peer);
+    }
+
+    /**
      * send BitField message
      * @param out output stream to send message
      *
@@ -66,9 +73,9 @@ public class P2PMessageProcess {
             return;
         }
 
-        byte[] result = new byte[field.length + 5];
-        byte[] fieldLength = intToByteArray(field.length);
-        byte[] type = intToByteArray(5);
+        byte[] result = new byte[Main.field.length + 5];
+        byte[] fieldLength = intToByteArray(Main.field.length);
+        byte[] type = intToByteArray(MSG_BIT_FIELD);
 
         for (int i = 0; i < result.length; i++) {
             if (i < 4) {
@@ -78,11 +85,52 @@ public class P2PMessageProcess {
                 result[i] = type[3];
             }
             else {
-                result[i] = field[i - 5];
+                result[i] = Main.field[i - 5];
             }
         }
 
         sendMessage(result, out);
+    }
+
+    /**
+     * send request or have message
+     * @param type indicate the type of actual message
+     * @param index indicate the index of piece that it wants to request
+     * @param out output stream to send message
+     */
+    private void sendRequestHaveMsg(int type, int index, ObjectOutputStream out) {
+        byte[] result = new byte[9];
+        byte[] length = intToByteArray(4);
+        byte[] indexByteArray = intToByteArray(index);
+
+        System.arraycopy(length, 0, result, 0, 4);
+        result[4] = intToByteArray(type)[3];
+        System.arraycopy(indexByteArray, 0, result, 5, 4);
+
+        sendMessage(result, out);
+    }
+
+    /**
+     * send piece to another peer
+     * @param pieceIndex index of the requested piece
+     *
+     */
+    private void sendPiece(byte[] pieceIndex, ObjectOutputStream out){
+        // TODO check piece index is valid
+        // msg = length+type+[index+piece]
+        byte[] pieceContent = P2PFileProcess.getPiece(byteArrayToInt(pieceIndex));
+        int pieceSize = pieceContent.length;
+        byte[] msg = new byte[5+4+pieceSize];
+        byte[] msgLength = intToByteArray(5 + pieceSize);
+        byte type = intToByteArray(MSG_PIECE)[3]; // only last byte
+
+        // ArrayCopy args: source array, start point, des array, start point, length
+        System.arraycopy(msgLength,0,msg,0,4); // 1-4 bytes: msg length
+        msg[4] = type; // 5th byte: msg type
+        System.arraycopy(pieceIndex,0,msg,5,4);// 6-10 bytes: pieceIndex
+        // 9 - remaining bytes: piece
+        System.arraycopy(pieceContent,0,msg,9, pieceSize);
+        sendMessage(msg, out);
     }
 
     /**
@@ -91,18 +139,19 @@ public class P2PMessageProcess {
      * @param out output stream to send message
      *
      */
-    public void sendActualMsg(int type, ObjectOutputStream out) {
+    private void sendActualMsg(int type, ObjectOutputStream out) {
         byte[] message = new byte[5];
-        byte[] fieldLength = intToByteArray(field.length);
+        message[4] = intToByteArray(type)[3];
+        //byte[] fieldLength = intToByteArray(Main.field.length);
 
-        for (int i = 0; i < message.length; i++) {
+       /* for (int i = 0; i < message.length; i++) {
             if (i < 4) {
                 message[i] = fieldLength[i];
             }
             else {
                 message[i] = intToByteArray(type)[3];
             }
-        }
+        }*/
         sendMessage(message, out);
     }
 
@@ -112,12 +161,13 @@ public class P2PMessageProcess {
      * @param out output stream to send message
      *
      */
-    public void interestOrNot(byte[] message, ObjectOutputStream out) {
+    private void interestOrNot(byte[] message, ObjectOutputStream out, int peerID) {
         boolean flag;
         flag = false;
-        for (int i = 0; i < field.length; i++) {
-            if (message[i] == 1 && field[i] == 0) {
+        for (int i = 0; i < Main.field.length; i++) {
+            if (message[i] == 1 && Main.field[i] == 0) {
                 sendActualMsg(MSG_INTERESTED, out);
+                selectRandomPiece(peerID, out);
                 flag = true;
                 break;
             }
@@ -125,6 +175,61 @@ public class P2PMessageProcess {
         if (!flag) {
             sendActualMsg(MSG_NOT_INTERESTED, out);
         }
+    }
+
+    /**
+     * find interesting pieces that this peer doesn't have but its neighbour has. And return the index of piece with list
+     * @return List<Integer>
+     */
+    private List<Integer> findInterestingPieces(int peerId) {
+        List<Integer> result = new LinkedList<>();
+        byte[] peerList = Main.peersBitField.get(peerId);
+        for (int i = 0; i <Main.field.length; i++) {
+            if (Main.field[i] == 0 && peerList[i] == 1) {
+                result.add(i);
+            }
+        }
+
+        if (result.size() != 0) {
+            return result;
+        }
+        return null;
+    }
+
+    /**
+     * select a random piece index from interesting map's list
+     *
+     */
+    private synchronized void selectRandomPiece(int peerId, ObjectOutputStream out) {
+       Random rand = new Random();
+        while (interestingMap.containsKey(peerId)) {
+            //System.out.println("select randomly");
+            int index = rand.nextInt(interestingMap.get(peerId).size());
+            //System.out.println(interestingMap.get(peerId).get(index));
+            //System.out.println(Main.field[interestingMap.get(peerId).get(index)]);
+
+            /*for (byte b : Main.field) {
+                System.out.print(b + " ");
+            }
+            System.out.println();*/
+
+            if (Main.field[interestingMap.get(peerId).get(index)] == 0) {
+                //change field bit to 2 in order to represent this piece is requesting from other neighbours
+                Main.field[interestingMap.get(peerId).get(index)] = 2;
+
+                sendRequestHaveMsg(MSG_REQUEST, interestingMap.get(peerId).get(index), out);
+                break;
+            }
+            else {
+                interestingMap.get(peerId).remove(index);
+                if (interestingMap.get(peerId).size() == 0) {
+                    interestingMap.remove(peerId);
+                }
+            }
+
+        }
+
+
     }
 
     /**
@@ -136,11 +241,19 @@ public class P2PMessageProcess {
      */
     public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) throws IOException {
         boolean flag;
-        byte[] pieceID = new byte[4]; // received piece ID in have and piece
-        byte[] peerBitfield; // corresponding bitfield
+        byte[] peerBitField; // corresponding BitField
 
         while(true)
         {
+            //identify whether system should be terminated
+            if (id == Main.firstPeerID && Main.processingList.size() == 0) {
+                System.out.println("all peers have finished their task, the system will be terminated");
+                for (Integer key : peerMap.keySet()) {
+                    sendActualMsg(MSG_ALL_FINISH, peerMap.get(key).getOut());
+                }
+                System.exit(0);
+            }
+
             //message received from the client
             try {
                 byte[] message = (byte[]) in.readObject();
@@ -148,74 +261,171 @@ public class P2PMessageProcess {
 
                 switch (type){
                     case MSG_CHOKE:
-                        System.out.println("choke time");
+                        System.out.println("received choke, parse and update choke list");
+                        // TODO parse CHOKE msg
+
                         break;
                     case MSG_UN_CHOKE:
-                        System.out.println("unchoke time");
+                        System.out.println("received unchoke, parse it and update");
+                        // TODO parse UNCHOKE msg
+
                         break;
                     case MSG_INTERESTED:
                         System.out.println("interested time");
+                        P2PFileProcess.Log(id, P2PFileProcess.LOG_INTEREST, peerID);
+                        // TODO parse INTEREST msg
+
                         break;
                     case MSG_NOT_INTERESTED:
                         System.out.println("not_interested time");
+                        P2PFileProcess.Log(id, P2PFileProcess.LOG_NOTINTEREST, peerID);
+                        // TODO parse NOT_INTEREST msg
+
                         break;
                     case MSG_HAVE:
-                        System.out.println("have time");
-                        // update peer bitfield
-                        System.arraycopy(message, 5, pieceID, 0, 4);
-                        peerBitfield = Main.peersBitField.get(peerID);
-                        peerBitfield[byteArrayToInt(pieceID)-1] = 1;
+                        System.out.println("received have msg, update bit field and send interest/not back");
+
+                        // update peer BitField
+                        byte[] havePieceID = new byte[4];
+                        System.arraycopy(message, 5, havePieceID, 0, 4);
+                        if (!Main.peersBitField.containsKey(peerID)) {
+                            Main.peersBitField.put(peerID, new byte[P2PFileProcess.getTotalPieces()]);
+                        }
+                        peerBitField = Main.peersBitField.get(peerID);
+                        peerBitField[byteArrayToInt(havePieceID)] = 1;
+
+                        //log have related message
+                        P2PFileProcess.Log(id, P2PFileProcess.LOG_HAVE, peerID, byteArrayToInt(havePieceID));
 
                         // send an interested/non-interested message
-                        interestOrNot(Main.peersBitField.get(peerID), out);
+                        interestOrNot(Main.peersBitField.get(peerID), out, peerID);
                         break;
                     case MSG_BIT_FIELD:
                         System.out.println("Received bitfield: ");
                         for (byte b : message) {
                             System.out.print(b + " ");
                         }
+                        System.out.println();
 
                         // store peers bitfield
-                        byte[] peerField = new byte[field.length];
-                        System.arraycopy(message, 5, peerField, 0, field.length);
+                        byte[] peerField = new byte[Main.field.length];
+                        System.arraycopy(message, 5, peerField, 0, Main.field.length);
                         Main.peersBitField.put(peerID, peerField);
+                        //add interesting part for neighbour into interestingMap
+                        List<Integer> interestingPiecesList = findInterestingPieces(peerID);
+                        if (interestingPiecesList != null) {
+                            interestingMap.put(peerID, interestingPiecesList);
+                        }
 
                         // send an interested/non-interested message
-                        interestOrNot(Main.peersBitField.get(peerID), out);
+                        if (interestingMap.containsKey(peerID)) {
+                            sendActualMsg(MSG_INTERESTED, out);
+                            selectRandomPiece(peerID, out);
+                        }
+                        else {
+                            sendActualMsg(MSG_NOT_INTERESTED, out);
+                        }
+                        //interestOrNot(Main.peersBitField.get(peerID), out);
                         break;
                     case MSG_REQUEST:
-                        System.out.println("received request from client");
+                        System.out.println("received request, parse and send piece back.");
+                        byte[] requestPieceID = new byte[4];
                         // TODO parse the request and get the pieceIndex
-
+                        System.arraycopy(message, 5, requestPieceID, 0, 4);
                         // send out piece
-                        int pieceIndex = 5;
-//                        P2PFileProcess p2pFile = new P2PFileProcess();
-//                        SendPiece.sendPiece(pieceIndex,out,p2pFile);
+                        sendPiece(requestPieceID,out);
                         break;
                     case MSG_PIECE:
-                        System.out.println("piece time");
-                        // update this bitfield
-                        System.arraycopy(message, 5, pieceID, 0, 4);
-                        this.field[byteArrayToInt(pieceID)-1] = 1;
-                        // send non-interested message or not after receiving piece
-                        flag = false;
-                        for (Integer key : Main.peersBitField.keySet()) {
-                            peerBitfield = Main.peersBitField.get(key);
-                            for (int j = 0; j < field.length; j++) {
-                                if (peerBitfield[j] == 1 && field[j] == 0) {
-                                    flag = true;
-                                    break;
+                        System.out.println("received piece msg, save it and update bit field.");
+
+                        synchronized (this) {
+                            // TODO save piece
+                            byte[] pieceID = new byte[4];
+                            System.arraycopy(message,5,pieceID,0,4); // get pieceID (byte[])
+                            // git the index of piece
+                            int pieceIDInt = byteArrayToInt(pieceID);
+                            // update this BitField
+                            Main.field[pieceIDInt] = 1;
+
+                            if (interestingMap.containsKey(peerID)) {
+                                //delete the interesting index in the map of corresponded list
+                                interestingMap.get(peerID).remove(Integer.valueOf(pieceIDInt));
+                                //delete this entry if it doesn't have corresponded interesting part.
+                                if (interestingMap.get(peerID).size() == 0) {
+                                    interestingMap.remove(peerID);
                                 }
                             }
-                            if (!flag) {
-                                // send non-interested to peer i
-                                sendActualMsg(MSG_NOT_INTERESTED, peerMap.get(key).getOut());
+
+                            // save the piece into filePieces by index
+                            System.arraycopy(message,9,P2PFileProcess.filePieces[pieceIDInt],0, message.length - 9);
+
+                            //send have message to neighbours
+                            sendRequestHaveMsg(MSG_HAVE, pieceIDInt, out);
+
+                            // send non-interested message or not after receiving piece
+                            //flag = false;
+                            for (Integer key : Main.peersBitField.keySet()) {
+                                peerBitField = Main.peersBitField.get(key);
+                                interestOrNot(peerBitField, peerMap.get(key).getOut(), peerID);
+                                /*for (int j = 0; j < Main.field.length; j++) {
+                                    if (peerBitField[j] == 1 && Main.field[j] == 0) {
+                                        flag = true;
+                                        break;
+                                    }
+                                }
+                                if (!flag) {
+                                    // send non-interested to peer i
+                                    sendActualMsg(MSG_NOT_INTERESTED, peerMap.get(key).getOut());
+                                }
+                                else {
+                                    sendActualMsg(MSG_INTERESTED, out);
+                                    selectRandomPiece(peerID, out);
+                                }*/
                             }
+                            // send have to all neighbors
+
+                            // TBD
+
+                            // get current # of pieces
+                            int sum = 0;
+                            for (byte a : Main.field){
+                                if (a == 1) {
+                                    sum+=a;
+                                }
+                            }
+                            P2PFileProcess.Log(id,P2PFileProcess.LOG_DOWNLOAD,peerID,pieceIDInt,sum);
+
+                            //identify combine condition
+                            boolean combineFlag = true;
+                            for (byte b : Main.field) {
+                                if (b == 0 || b == 2) {
+                                    combineFlag = false;
+                                }
+                            }
+                            //identify combine pieces into a file when the condition is satisfied
+                            if (combineFlag) {
+                                P2PFileProcess.combinePieces(id);
+                                System.out.println("the file has been completed");
+                                P2PFileProcess.Log(id, P2PFileProcess.LOG_COMPLETE);
+
+                                //send finish message to first peer
+                                sendActualMsg(MSG_FINISH, peerMap.get(Main.firstPeerID).getOut());
+                            }
+
                         }
-                        // send have to all neighbors
-                        // TBD
+
                         break;
-                    default: break;
+                    case MSG_FINISH:
+                        System.out.println("The neighbour has finished his task");
+                        Main.processingList.remove(Integer.valueOf(peerID));
+                        break;
+                    case MSG_ALL_FINISH:
+                        System.out.println("ALL peers have finished his task");
+                        System.exit(0);
+                        break;
+                    default:
+                        System.out.println("default msg type, wrong!");
+                        break;
                 }
 
             } catch (IOException | ClassNotFoundException e) {
@@ -229,7 +439,7 @@ public class P2PMessageProcess {
      * @param i input integer that we need to transfer
      * @return byte array
      */
-    public static byte[] intToByteArray(int i) {
+    private static byte[] intToByteArray(int i) {
         byte[] result = new byte[4];
         result[0] = (byte)((i >> 24) & 0xFF);
         result[1] = (byte)((i >> 16) & 0xFF);
@@ -282,12 +492,13 @@ public class P2PMessageProcess {
      * identify whether it has pieces
      * @return boolean value
      */
-    public boolean isEmptyBitField() {
+    private boolean isEmptyBitField() {
         boolean result = false;
 
-        for (byte b : field) {
+        for (byte b : Main.field) {
             if (b == 1) {
                 result = true;
+                break;
             }
         }
 

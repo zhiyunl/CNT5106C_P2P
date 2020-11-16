@@ -1,19 +1,20 @@
 package com.company.impl;
 
-import com.company.client.ClientListener;
 import com.company.helper.P2PFileProcess;
+import com.company.helper.P2PMessageProcess;
+import com.company.peer.Peer;
 import com.company.peer.PeerListener;
-import com.company.server.ServerListener;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.net.Socket;
+import java.util.*;
 
 public class Main {
 
-    public static Map<Integer, byte[]> peersBitField = new HashMap<>(); // HashMap for storing peers id and corresponding bitfield
+    public static Map<Integer, byte[]> peersBitField = new HashMap<>(); // HashMap for storing peers id and corresponding BitField
+    public static List<Integer> processingList = new LinkedList<>();
+    public static int firstPeerID;
+    public static byte[] field;
 
     private Main(int id) {
         P2PFileProcess p2PFileProcess = new P2PFileProcess();
@@ -26,33 +27,51 @@ public class Main {
             //get all peers information
             List<P2PFileProcess.PeerInfo> peersInfo = p2PFileProcess.PeerInfoCfg();
             // generate test data
-            p2PFileProcess.DataGeneration(id);
+            //p2PFileProcess.DataGeneration(id);
             // load pieces from file into 2d byte array
             p2PFileProcess.initPieces(id);
-            // combine all pieces and write into file
-            p2PFileProcess.combinePieces(id);
+            // init Log
+            p2PFileProcess.LogSetup(id);
 
-            int hasFile = 0;
-            byte[] field = new byte[p2PFileProcess.getTotalPieces()];
+//            int hasFile = 0;
+            field = new byte[P2PFileProcess.getTotalPieces()];
 
-            //identify whether it has the whole file
-            for (P2PFileProcess.PeerInfo peer : peersInfo) {
-                if (peer.ID == id) {
-                    hasFile = peer.hasFile;
-                    break;
+            //initialize processingList
+            firstPeerID = peersInfo.get(0).ID;
+            if (id == firstPeerID) {
+                for (P2PFileProcess.PeerInfo peerInfo : peersInfo) {
+                    if (peerInfo.hasFile == 0) {
+                        processingList.add(peerInfo.ID);
+                    }
                 }
             }
 
-            //create bit field array at the initial stage
-            if (hasFile == 0) {
+//            //identify whether it has the whole file
+//            for (P2PFileProcess.PeerInfo peer : peersInfo) {
+//                if (peer.ID == id) {
+//                    hasFile = peer.hasFile;
+//                    break;
+//                }
+//            }
+//
+//            //create bit field array at the initial stage
+//            if (hasFile == 0) {
+//                Arrays.fill(field, (byte) 0);
+//            }
+//            else {
+//                Arrays.fill(field, (byte) 1);
+//            }
+
+            //initialize field
+            int myIndex = P2PFileProcess.getPeerIndexByID(id);
+            if (peersInfo.get(myIndex).hasFile == 0){
                 Arrays.fill(field, (byte) 0);
-            }
-            else {
+            }else{
                 Arrays.fill(field, (byte) 1);
             }
 
             //create server and client thread for this peer
-            PeerListener peerListener = new PeerListener(peersInfo, id, field);
+            PeerListener peerListener = new PeerListener(new P2PMessageProcess(id), peersInfo);
             peerListener.start();
         } catch (IOException e) {
             e.printStackTrace();

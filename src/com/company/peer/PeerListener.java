@@ -1,6 +1,8 @@
 package com.company.peer;
 
 import com.company.helper.P2PFileProcess;
+import com.company.helper.P2PMessageProcess;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -8,13 +10,11 @@ import java.util.List;
 
 public class PeerListener extends Thread {
     private List<P2PFileProcess.PeerInfo> peersInfo;
-    private int id;
-    private byte[] field;
+    private P2PMessageProcess p2PMessageProcess;
 
-    public PeerListener(List<P2PFileProcess.PeerInfo> peersInfo, int id, byte[] field) {
+    public PeerListener(P2PMessageProcess p2PMessageProcess, List<P2PFileProcess.PeerInfo> peersInfo) {
         this.peersInfo = peersInfo;
-        this.id = id;
-        this.field = field;
+        this.p2PMessageProcess = p2PMessageProcess;
     }
 
     public void run() {
@@ -23,12 +23,13 @@ public class PeerListener extends Thread {
         //listen to all the request
         try {
             for (P2PFileProcess.PeerInfo peerInfo : peersInfo) {
-                if (peerInfo.ID >= id) {
+                if (peerInfo.ID >= P2PMessageProcess.id) {
                     break;
                 }
 
                 Socket connection = new Socket(peerInfo.hostName, peerInfo.port);
-                new Peer(connection, id, field, peerInfo).start();
+                new Peer(connection, p2PMessageProcess, peerInfo).start();
+                P2PFileProcess.Log(P2PMessageProcess.id, P2PFileProcess.LOG_CONNECTTO, peerInfo.ID);
                 System.out.println("Connected to localhost in port " + peerInfo.port);
                 clientNum++;
             }
@@ -36,7 +37,7 @@ public class PeerListener extends Thread {
             clientNum = peersInfo.size() - clientNum - 1;
             int sPort = 0;
             for (P2PFileProcess.PeerInfo peerInfo : peersInfo) {
-                if (peerInfo.ID == id) {
+                if (peerInfo.ID == P2PMessageProcess.id) {
                     sPort = peerInfo.port;
                     break;
                 }
@@ -50,7 +51,7 @@ public class PeerListener extends Thread {
                     break;
                 }
 
-                new Peer(listener.accept(), id, field).start();
+                new Peer(listener.accept(), p2PMessageProcess).start();
                 System.out.println("Client " + clientNum + " is connected!");
                 clientNum--;
             }

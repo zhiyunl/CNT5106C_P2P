@@ -14,21 +14,18 @@ public class Peer extends Thread {
     private ObjectOutputStream out;    //stream write to the socket
     private String state = "connection"; // the state of the program
     private P2PFileProcess.PeerInfo peerInfo = null;
-    private int id;
-    private byte[] field;
+    private P2PMessageProcess p2PMessageProcess;
 
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
 
-    Peer(Socket connection, int id, byte[] field) {
+    Peer(Socket connection, P2PMessageProcess p2PMessageProcess) {
         this.connection = connection;
-        this.id = id;
-        this.field = field;
+        this.p2PMessageProcess = p2PMessageProcess;
     }
 
-    Peer(Socket connection, int id, byte[] field, P2PFileProcess.PeerInfo peerInfo) {
+    Peer(Socket connection, P2PMessageProcess p2PMessageProcess, P2PFileProcess.PeerInfo peerInfo) {
         this.connection = connection;
-        this.id = id;
-        this.field = field;
+        this.p2PMessageProcess = p2PMessageProcess;
         this.peerInfo = peerInfo;
     }
 
@@ -45,12 +42,13 @@ public class Peer extends Thread {
                 out.flush();
             }
 
-            P2PMessageProcess p2PMessageProcess = new P2PMessageProcess(id, field);
+            //P2PMessageProcess p2PMessageProcess = new P2PMessageProcess(id);
             //send handshake message
             p2PMessageProcess.sendHandShakeMsg(out);
 
             byte[] handshakeMsg = (byte[]) in.readObject();
             int peerID = p2PMessageProcess.getHandshakeId(handshakeMsg);
+            P2PFileProcess.Log(P2PMessageProcess.id, P2PFileProcess.LOG_CONNECTFROM, peerID);
 
             //identify whether it is a right handshake
             if (p2PMessageProcess.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && (peerInfo == null || peerInfo.ID == peerID)) {
@@ -59,8 +57,12 @@ public class Peer extends Thread {
                 //send BitField
                 p2PMessageProcess.sendBitField(out);
                 //add peer to the peer map in order to send not interested to all neighbours
-                P2PMessageProcess.peerMap.put(peerID, this);
-                System.out.println("the peer " + id + " " + "can send message to " + peerID + " by this out channel");
+                p2PMessageProcess.constructPeerMap(peerID, this);
+                System.out.println("the peer " + P2PMessageProcess.id + " " + "can send message to " + peerID + " by this out channel");
+
+                // test send piece
+//                byte[] pieceID = P2PMessageProcess.intToByteArray(5);
+//                p2PMessageProcess.sendPiece(pieceID,out);
             }
 
             //handle the actual message after handshake

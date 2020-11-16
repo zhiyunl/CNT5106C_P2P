@@ -16,33 +16,33 @@ public class P2PFileProcess {
     int NumberOfPreferredNeighbors;
     int UnchokingInterval;
     int OptimisticUnchokingInterval;
-    String FileName;
-    public int FileSize;
-    public int PieceSize;
-    public byte[][] filePieces; // hold temporary pieces
+    static String FileName;
+    public static int FileSize;
+    public static int PieceSize;
+    public static byte[][] filePieces; // hold temporary pieces
     // parameters for peerInfo.cfg
-    List<PeerInfo> peers;
+    static List<PeerInfo> peers;
     int peerNum; // total # of valid peers
     //Constants for LOG TYPE
-    final int LOG_CONNECTTO = 1;
-    final int LOG_CONNECTFROM = 2;
-    final int LOG_PREFER = 3;
-    final int LOG_OPTIMISTIC = 4;
-    final int LOG_UNCHOKING = 5;
-    final int LOG_CHOKING = 6;
-    final int LOG_HAVE = 7;
-    final int LOG_INTEREST = 8;
-    final int LOG_NOTINTEREST = 9;
-    final int LOG_DOWNLOAD = 10;
-    final int LOG_COMPLETE = 11;
+    public final static int LOG_CONNECTTO = 1;
+    public final static int LOG_CONNECTFROM = 2;
+    public final static int LOG_PREFER = 3;
+    public final static int LOG_OPTIMISTIC = 4;
+    public final static int LOG_UNCHOKING = 5;
+    public final static int LOG_CHOKING = 6;
+    public final static int LOG_HAVE = 7;
+    public final static int LOG_INTEREST = 8;
+    public final static int LOG_NOTINTEREST = 9;
+    public final static int LOG_DOWNLOAD = 10;
+    public final static int LOG_COMPLETE = 11;
 
     /**
      * Get the piece by index.
      * @param pieceIndex the index for the piece
      * @return the total number
      */
-    public byte[] getPiece(int pieceIndex) {
-        return this.filePieces[pieceIndex];
+    public static byte[] getPiece(int pieceIndex) {
+        return filePieces[pieceIndex];
     }
 
     /**
@@ -84,68 +84,85 @@ public class P2PFileProcess {
      * @throws IOException the io exception
      */
     public void initPieces(int ID) throws IOException {
-        this.filePieces = new byte[this.getTotalPieces()][this.PieceSize];
-        // check ID and hasFile
-        for (int i = 0; i < peers.size(); i++) {
-            if (ID == peers.get(i).ID) { // locate the peers by ID
-                String workDir = System.getProperty("user.dir");
-                String peerFolder = workDir + File.separator + "peer_" + peers.get(i).ID + File.separator;
-                System.out.println("load data file path:" + peerFolder);
-                if (peers.get(i).hasFile == 1) { // check hasFile field
-                    byte[] files = Files.readAllBytes(Paths.get(peerFolder + this.FileName));
-                    // turn 1d into 2d byte array
-                    int total = getTotalPieces();
-                    for (int j = 0; j < total - 1; j++) {
-                        this.filePieces[j] = Arrays.copyOfRange(files, j * this.PieceSize, (j + 1) * this.PieceSize);
-                    }
-                    this.filePieces[total - 1] = Arrays.copyOfRange(files, (total - 1) * this.PieceSize, files.length);
-                } else {
-                    System.out.println("This peer does not have file!");
+        filePieces = new byte[getTotalPieces()][PieceSize];
+        int peerIndex = P2PFileProcess.getPeerIndexByID(ID);
+        if (peerIndex!=-1){
+            String peerFolder = P2PFileProcess.initPeerFolder(ID);
+            if (peers.get(peerIndex).hasFile == 1) { // check hasFile field
+                byte[] files = Files.readAllBytes(Paths.get(peerFolder + FileName));
+                // turn 1d into 2d byte array
+                int total = getTotalPieces();
+                for (int j = 0; j < total - 1; j++) {
+//                    System.arraycopy(files,j * PieceSize,filePieces[j],0,PieceSize);
+                    filePieces[j] = Arrays.copyOfRange(files, j * PieceSize, (j + 1) * PieceSize);
                 }
-                break;
+//                System.arraycopy(files,(total - 1) * PieceSize, filePieces[total-1],0,files.length- (total - 1)* PieceSize);
+                filePieces[total - 1] = Arrays.copyOfRange(files, (total - 1) * PieceSize, files.length);
             }
-            if (i == this.peers.size() - 1) {
-                System.out.println("peer ID Not Found!");
-            }
+        }else{
+            System.out.println("peer ID Not Found!");
         }
+    }
+    /**
+     * Create folder for the peer.
+     *
+     * @param ID the id
+     * @param str the string to write
+     */
+    public static void writeBack(int ID, String str){
+        int peerIndex = getPeerIndexByID(ID);
+        if (peerIndex == - 1) {
+            System.out.println("peer ID Not Found!");
+        }else{
+            String peerFolder = initPeerFolder(ID);
+            try (FileWriter fileWriter = new FileWriter(peerFolder + FileName)) {
+                    fileWriter.write(str);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+        }
+    }
+//    /**
+//     * Get the correct project dir for running at both CMD and IDE .
+//     *
+//     * @return the path string for project
+//     */
+//    public static String getProjDir(){
+//        String path =
+//    }
+    /**
+     * Create folder for the peer.
+     *
+     * @param ID the id
+     * @return the folder path string
+     */
+    public static String initPeerFolder(int ID){
+        String workDir = System.getProperty("user.dir");
+        String peerFolder = workDir + File.separator + "peer_" + ID + File.separator;
+        File dir = new File(peerFolder);
+        if (!dir.exists()) dir.mkdirs();// create dir if not exists.
+        // Files.createDirectories(Paths.get(peerFolder));
+        return peerFolder;
     }
 
     /**
      * Combine pieces and write back into file.
      *
      * @param ID the id
-     * @throws IOException the io exception
      */
-    public void combinePieces(int ID) throws IOException {
+    public static void combinePieces(int ID) {
         StringBuilder out = new StringBuilder();
         int total = getTotalPieces();
         for (int j = 0; j < total - 1; j++) {
             // for images/binary, use base64
 //            out +=Base64.getEncoder().encodeToString(this.filePieces[j]);
             // for text,use utf-8
-            out.append(new String(this.filePieces[j], StandardCharsets.UTF_8));
+            out.append(new String(filePieces[j], StandardCharsets.UTF_8));
         }
 //        out+=Base64.getEncoder().encodeToString(Arrays.copyOfRange(this.filePieces[total-1],0,this.FileSize-1-this.PieceSize*(total-1)));
-        out.append(new String(Arrays.copyOfRange(this.filePieces[total - 1], 0, this.FileSize - this.PieceSize * (total - 1)), StandardCharsets.UTF_8));
+        out.append(new String(Arrays.copyOfRange(filePieces[total - 1], 0, FileSize - PieceSize * (total - 1)), StandardCharsets.UTF_8));
         // write out to files
-        // check ID and hasFile
-        for (int i = 0; i < peers.size(); i++) {
-            if (ID == peers.get(i).ID) { // locate the peers by ID
-                String workDir = System.getProperty("user.dir");
-                String peerFolder = workDir + File.separator + "peer_" + peers.get(i).ID + File.separator;
-                System.out.println("write data file path:" + peerFolder);
-//                Files.createDirectories(Paths.get(peerFolder));
-                File dir = new File(peerFolder);
-                if (!dir.exists()) dir.mkdirs();// create dir if not exists.
-                try (FileWriter fileWriter = new FileWriter(peerFolder + this.FileName)) {
-                    fileWriter.write(out.toString());
-                }
-                break;
-            }
-            if (i == this.peerNum - 1) {
-                System.out.println("peer ID Not Found!");
-            }
-        }
+        writeBack(ID, out.toString());
     }
 
     /**
@@ -153,8 +170,8 @@ public class P2PFileProcess {
      *
      * @return the total number
      */
-    public int getTotalPieces() {
-        return this.FileSize % this.PieceSize == 0 ? this.FileSize / this.PieceSize : this.FileSize / this.PieceSize + 1;
+    public static int getTotalPieces() {
+        return FileSize % PieceSize == 0 ? FileSize / PieceSize : FileSize / PieceSize + 1;
     }
 
     /**
@@ -189,15 +206,15 @@ public class P2PFileProcess {
                         cnt++;
                         break;
                     case "FileName":
-                        this.FileName = line[1];
+                        FileName = line[1];
                         cnt++;
                         break;
                     case "FileSize":
-                        this.FileSize = Integer.parseInt(line[1]);
+                        FileSize = Integer.parseInt(line[1]);
                         cnt++;
                         break;
                     case "PieceSize":
-                        this.PieceSize = Integer.parseInt(line[1]);
+                        PieceSize = Integer.parseInt(line[1]);
                         cnt++;
                         break;
                     default:
@@ -217,7 +234,7 @@ public class P2PFileProcess {
      * @throws IOException the io exception
      */
     public List<PeerInfo> PeerInfoCfg() throws IOException {
-        this.peers = new LinkedList<>();
+        peers = new LinkedList<>();
         String workDir = System.getProperty("user.dir");
         String peerInfoCfg = "PeerInfo.cfg";
         String absolutePath = workDir + File.separator + peerInfoCfg;
@@ -235,7 +252,7 @@ public class P2PFileProcess {
                 peer.hostName = line[1];
                 peer.port = Integer.parseInt(line[2]);
                 peer.hasFile = Integer.parseInt(line[3]);
-                this.peers.add(peer);
+                peers.add(peer);
                 cnt++;
             }
             System.out.println("Loaded " + cnt + " peers' information");
@@ -244,46 +261,46 @@ public class P2PFileProcess {
             System.out.println("PeerInfo.cfg file not found");
         }
 
-        return this.peers;
+        return peers;
+    }
+
+    /**
+     * Lookup peer index by ID.
+     *
+     * @param ID the peer Process ID to generate the file
+     * @return index for the peer
+     */
+    public static int getPeerIndexByID(int ID){
+        for (int i = 0; i < peers.size(); i++) {
+            if (ID == peers.get(i).ID) { // locate the peers by ID
+                return i;
+            }
+        }
+        System.out.println("ID not found");
+        return -1; // not found
     }
 
     /**
      * Test File Generation.
      *
      * @param ID the peer Process ID to generate the file
-     * @throws IOException the io exception
      */
-    public void DataGeneration(int ID) throws IOException {
+    public void DataGeneration(int ID) {
         //  use file size information in the common.cfg to generate file before every run
         //  only peerProcess need to generate file for itself, (if hasFile)
-        int cnt = this.FileSize / 20;
+        int cnt = FileSize / 20;
         // note below string is of fixed size 20 bytes.
         String fileContent = String.join("", Collections.nCopies(cnt, "this is 20 bytes !!!"));
-        int mod = this.FileSize % 20;
+        int mod = FileSize % 20;
         if (mod != 0) {
             // append '1's for remainder.
             fileContent += String.join("", Collections.nCopies(mod, "1"));
         }
-        // check ID and hasFile
-        for (int i = 0; i < peers.size(); i++) {
-            if (ID == peers.get(i).ID) { // locate the peers by ID
-                String workDir = System.getProperty("user.dir");
-                String peerFolder = workDir + File.separator + "peer_" + peers.get(i).ID + File.separator;
-                System.out.println("generate test data file path:" + peerFolder);
-                File dir = new File(peerFolder);
-                if (!dir.exists()) dir.mkdirs();// create dir if not exists.
-                if (peers.get(i).hasFile == 1) { // check hasFile field
-                    try (FileWriter fileWriter = new FileWriter(peerFolder + this.FileName)) {
-                        fileWriter.write(fileContent);
-                    }
-                } else {
-                    System.out.println("This peer does not have file!");
-                }
-                break;
-            }
-            if (i == this.peerNum - 1) {
-                System.out.println("peer ID Not Found!");
-            }
+        // check hasFile and write back into file
+        if (peers.get(getPeerIndexByID(ID)).hasFile == 1) { // check hasFile field
+            writeBack(ID,fileContent);
+        } else {
+            System.out.println("This peer does not have file!");
         }
     }
 
@@ -309,9 +326,19 @@ public class P2PFileProcess {
      *
      * @param ID1  the peerProcess id to write the log
      * @param type the log type
-     * @param args the args for the log             In connect 1.to 2.from and 4.optimistic 5.unchoking 6.choking 8.interested 9.not interested.                   args is a int: ID2             In 3.preferred                   args is a array of int: preferred neighbors ID             In 7.HAVE                  args is [ID2, piece Number]             In 10.Download                  args is [ID2, piece Number, Total number of pieces]             In 11.Complete                  args is null
+     * @param args the args for the log
+     *             In connect 1.to 2.from and 4.optimistic 5.unchoking 6.choking 8.interested 9.not interested.
+     *                  args is a int: ID2
+     *             In 3.preferred
+     *                  args is a array of int: preferred neighbors ID
+     *             In 7.HAVE
+     *                  args is [ID2, pieceID]
+     *             In 10.Download
+     *                  args is [ID2, pieceID, Total number of pieces]
+     *             In 11.Complete
+     *                  args is null
      */
-    public void Log(int ID1, int type, int... args) {
+    public static void Log(int ID1, int type, int... args) {
         // get current working directory
         String workDir = System.getProperty("user.dir");
         String logPath = workDir + File.separator + "log_peer_" + ID1 + ".log";
