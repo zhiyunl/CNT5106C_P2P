@@ -2,8 +2,6 @@ package com.company.helper;
 
 import com.company.impl.Main;
 import com.company.peer.Peer;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -286,46 +284,50 @@ public class P2PMessageProcess {
                         System.out.println("received have msg, update bit field and send interest/not back");
 
                         // update peer BitField
-                        byte[] havePieceID = new byte[4];
-                        System.arraycopy(message, 5, havePieceID, 0, 4);
-                        if (!Main.peersBitField.containsKey(peerID)) {
-                            Main.peersBitField.put(peerID, new byte[P2PFileProcess.getTotalPieces()]);
-                        }
-                        peerBitField = Main.peersBitField.get(peerID);
-                        peerBitField[byteArrayToInt(havePieceID)] = 1;
+                       synchronized (this) {
+                           byte[] havePieceID = new byte[4];
+                           System.arraycopy(message, 5, havePieceID, 0, 4);
+                           if (!Main.peersBitField.containsKey(peerID)) {
+                               Main.peersBitField.put(peerID, new byte[P2PFileProcess.getTotalPieces()]);
+                           }
+                           peerBitField = Main.peersBitField.get(peerID);
+                           peerBitField[byteArrayToInt(havePieceID)] = 1;
 
-                        //log have related message
-                        P2PFileProcess.Log(id, P2PFileProcess.LOG_HAVE, peerID, byteArrayToInt(havePieceID));
+                           //log have related message
+                           P2PFileProcess.Log(id, P2PFileProcess.LOG_HAVE, peerID, byteArrayToInt(havePieceID));
 
-                        // send an interested/non-interested message
-                        interestOrNot(Main.peersBitField.get(peerID), out, peerID);
+                           // send an interested/non-interested message
+                           interestOrNot(Main.peersBitField.get(peerID), out, peerID);
+                       }
                         break;
                     case MSG_BIT_FIELD:
                         System.out.println("Received bitfield: ");
-                        for (byte b : message) {
-                            System.out.print(b + " ");
-                        }
-                        System.out.println();
+                        synchronized (this) {
+                            for (byte b : message) {
+                                System.out.print(b + " ");
+                            }
+                            System.out.println();
 
-                        // store peers bitfield
-                        byte[] peerField = new byte[Main.field.length];
-                        System.arraycopy(message, 5, peerField, 0, Main.field.length);
-                        Main.peersBitField.put(peerID, peerField);
-                        //add interesting part for neighbour into interestingMap
-                        List<Integer> interestingPiecesList = findInterestingPieces(peerID);
-                        if (interestingPiecesList != null) {
-                            interestingMap.put(peerID, interestingPiecesList);
-                        }
+                            // store peers bitfield
+                            byte[] peerField = new byte[Main.field.length];
+                            System.arraycopy(message, 5, peerField, 0, Main.field.length);
+                            Main.peersBitField.put(peerID, peerField);
+                            //add interesting part for neighbour into interestingMap
+                            List<Integer> interestingPiecesList = findInterestingPieces(peerID);
+                            if (interestingPiecesList != null) {
+                                interestingMap.put(peerID, interestingPiecesList);
+                            }
 
-                        // send an interested/non-interested message
-                        if (interestingMap.containsKey(peerID)) {
-                            sendActualMsg(MSG_INTERESTED, out);
-                            selectRandomPiece(peerID, out);
+                            // send an interested/non-interested message
+                            if (interestingMap.containsKey(peerID)) {
+                                sendActualMsg(MSG_INTERESTED, out);
+                                selectRandomPiece(peerID, out);
+                            }
+                            else {
+                                sendActualMsg(MSG_NOT_INTERESTED, out);
+                            }
+                            //interestOrNot(Main.peersBitField.get(peerID), out);
                         }
-                        else {
-                            sendActualMsg(MSG_NOT_INTERESTED, out);
-                        }
-                        //interestOrNot(Main.peersBitField.get(peerID), out);
                         break;
                     case MSG_REQUEST:
                         System.out.println("received request, parse and send piece back.");
@@ -357,7 +359,7 @@ public class P2PMessageProcess {
                             }
 
                             // save the piece into filePieces by index
-                            System.arraycopy(message,9,P2PFileProcess.filePieces[pieceIDInt],0, message.length - 9);
+                            System.arraycopy(message,9,P2PFileProcess.filePieces[pieceIDInt],0, Math.min(message.length - 9, P2PFileProcess.filePieces[pieceIDInt].length));
 
                             //send have message to neighbours
                             sendRequestHaveMsg(MSG_HAVE, pieceIDInt, out);

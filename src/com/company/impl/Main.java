@@ -62,6 +62,9 @@ public class Main {
 //                Arrays.fill(field, (byte) 1);
 //            }
 
+            //initialize P2P message process helper
+            P2PMessageProcess p2PMessageProcess = new P2PMessageProcess(id);
+
             //initialize field
             int myIndex = P2PFileProcess.getPeerIndexByID(id);
             if (peersInfo.get(myIndex).hasFile == 0){
@@ -71,7 +74,7 @@ public class Main {
             }
 
             //create server and client thread for this peer
-            PeerListener peerListener = new PeerListener(new P2PMessageProcess(id), peersInfo);
+            PeerListener peerListener = new PeerListener(p2PMessageProcess, peersInfo);
             peerListener.start();
         } catch (IOException e) {
             e.printStackTrace();

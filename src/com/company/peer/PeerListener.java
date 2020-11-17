@@ -22,6 +22,7 @@ public class PeerListener extends Thread {
         int clientNum = 0;
         //listen to all the request
         try {
+            //The higher id try to connect the lower id peer
             for (P2PFileProcess.PeerInfo peerInfo : peersInfo) {
                 if (peerInfo.ID >= P2PMessageProcess.id) {
                     break;
@@ -43,6 +44,7 @@ public class PeerListener extends Thread {
                 }
             }
 
+            // //The lower id try to listen to the higher id peer to connect
             System.out.println(sPort + " begin to listen connection request");
             ServerSocket listener = new ServerSocket(sPort);
             while (true) {

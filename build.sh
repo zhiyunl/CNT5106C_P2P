@@ -12,4 +12,7 @@ sleep 1
 java com.company.impl.Main 1002 > log2.txt 2>&1 &
 sleep .001
 java com.company.impl.Main 1003 > log3.txt 2>&1 &
-
+sleep .001
+java com.company.impl.Main 1004 > log4.txt 2>&1 &
+sleep .001
+java com.company.impl.Main 1005 > log5.txt 2>&1 &
