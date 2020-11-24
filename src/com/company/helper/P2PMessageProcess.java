@@ -207,6 +207,7 @@ public class P2PMessageProcess {
                 //change field bit to 2 in order to represent this piece is requesting from other neighbours
                 Main.field[interestingMap.get(peerId).get(index)] = 2;
                 sendRequestHaveMsg(MSG_REQUEST, interestingMap.get(peerId).get(index), out);
+                //delete index from map which has been requested
                 deleteMap(interestingMap.get(peerId).get(index));
                 break;
             }
@@ -341,6 +342,7 @@ public class P2PMessageProcess {
                             // update this BitField
                             Main.field[pieceIDInt] = 1;
 
+                            //delete related index in map which has been got
                             deleteMap(pieceIDInt);
 
                             // save the piece into filePieces by index
@@ -421,6 +423,10 @@ public class P2PMessageProcess {
         }
     }
 
+    /**
+     * delete related index from map
+     * @param pieceIDInt input integer that represent index that we want to delete
+     */
     private synchronized void deleteMap(int pieceIDInt) {
         List<Integer> nullList = new LinkedList<>();
         for (Integer ID : interestingMap.keySet()) {
