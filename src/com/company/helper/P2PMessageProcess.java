@@ -207,15 +207,16 @@ public class P2PMessageProcess {
                 //change field bit to 2 in order to represent this piece is requesting from other neighbours
                 Main.field[interestingMap.get(peerId).get(index)] = 2;
                 sendRequestHaveMsg(MSG_REQUEST, interestingMap.get(peerId).get(index), out);
+                deleteMap(interestingMap.get(peerId).get(index));
                 break;
             }
-            else {
-                //System.out.println("the main field index is:" + "----------------" + Main.field[interestingMap.get(peerId).get(index)]);
-                interestingMap.get(peerId).remove(index);
-                if (interestingMap.get(peerId).size() == 0) {
-                    interestingMap.remove(peerId);
-                }
-            }
+//            else {
+//                //System.out.println("the main field index is:" + "----------------" + Main.field[interestingMap.get(peerId).get(index)]);
+//                interestingMap.get(peerId).remove(index);
+//                if (interestingMap.get(peerId).size() == 0) {
+//                    interestingMap.remove(peerId);
+//                }
+//            }
 
         }
 
@@ -340,21 +341,7 @@ public class P2PMessageProcess {
                             // update this BitField
                             Main.field[pieceIDInt] = 1;
 
-                            List<Integer> nullList = new LinkedList<>();
-                            for (Integer ID : interestingMap.keySet()) {
-                                //remove interesting part
-                                if (interestingMap.get(ID).contains(pieceIDInt)) {
-                                    interestingMap.get(ID).remove(Integer.valueOf(pieceIDInt));
-                                }
-                                //record map whose value list is null
-                                if (interestingMap.get(ID).size() == 0) {
-                                    nullList.add(ID);
-                                }
-                            }
-                            //delete related map whose value list is null
-                            for (Integer ID : nullList) {
-                                interestingMap.remove(ID);
-                            }
+                            deleteMap(pieceIDInt);
 
                             // save the piece into filePieces by index
                             System.arraycopy(message,9,P2PFileProcess.filePieces[pieceIDInt],0, Math.min(message.length - 9, P2PFileProcess.filePieces[pieceIDInt].length));
@@ -431,6 +418,24 @@ public class P2PMessageProcess {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private synchronized void deleteMap(int pieceIDInt) {
+        List<Integer> nullList = new LinkedList<>();
+        for (Integer ID : interestingMap.keySet()) {
+            //remove interesting part
+            if (interestingMap.get(ID).contains(pieceIDInt)) {
+                interestingMap.get(ID).remove(Integer.valueOf(pieceIDInt));
+            }
+            //record map whose value list is null
+            if (interestingMap.get(ID).size() == 0) {
+                nullList.add(ID);
+            }
+        }
+        //delete related map whose value list is null
+        for (Integer ID : nullList) {
+            interestingMap.remove(ID);
         }
     }
 
