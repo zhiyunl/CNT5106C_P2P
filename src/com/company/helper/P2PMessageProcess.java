@@ -201,33 +201,30 @@ public class P2PMessageProcess {
      * select a random piece index from interesting map's list
      *
      */
-    private synchronized void selectRandomPiece(int peerId, ObjectOutputStream out) {
-       Random rand = new Random();
+    private void selectRandomPiece(int peerId, ObjectOutputStream out) {
+        Random rand = new Random();
         while (interestingMap.containsKey(peerId)) {
-            //System.out.println("select randomly");
             int index = rand.nextInt(interestingMap.get(peerId).size());
-            //System.out.println(interestingMap.get(peerId).get(index));
-            //System.out.println(Main.field[interestingMap.get(peerId).get(index)]);
-
-            /*for (byte b : Main.field) {
-                System.out.print(b + " ");
-            }
-            System.out.println();*/
 
             if (Main.field[interestingMap.get(peerId).get(index)] == 0) {
                 //change field bit to 2 in order to represent this piece is requesting from other neighbours
                 Main.field[interestingMap.get(peerId).get(index)] = 2;
-
                 sendRequestHaveMsg(MSG_REQUEST, interestingMap.get(peerId).get(index), out);
+                //delete index from map which has been requested
+                deleteMap(interestingMap.get(peerId).get(index));
                 break;
             }
-            else {
-                interestingMap.get(peerId).remove(index);
-                if (interestingMap.get(peerId).size() == 0) {
-                    interestingMap.remove(peerId);
-                }
-            }
+//            else {
+//                //System.out.println("the main field index is:" + "----------------" + Main.field[interestingMap.get(peerId).get(index)]);
+//                interestingMap.get(peerId).remove(index);
+//                if (interestingMap.get(peerId).size() == 0) {
+//                    interestingMap.remove(peerId);
+//                }
+//            }
+
         }
+
+
     }
 
     /**
@@ -238,7 +235,6 @@ public class P2PMessageProcess {
      *
      */
     public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) {
-        boolean flag;
         byte[] peerBitField; // corresponding BitField
         optimTimer = System.currentTimeMillis();
         while(true)
@@ -351,14 +347,8 @@ public class P2PMessageProcess {
                             // update this BitField
                             Main.field[pieceIDInt] = 1;
 
-                            if (interestingMap.containsKey(peerID)) {
-                                //delete the interesting index in the map of corresponded list
-                                interestingMap.get(peerID).remove(Integer.valueOf(pieceIDInt));
-                                //delete this entry if it doesn't have corresponded interesting part.
-                                if (interestingMap.get(peerID).size() == 0) {
-                                    interestingMap.remove(peerID);
-                                }
-                            }
+                            //delete related index in map which has been got
+                            deleteMap(pieceIDInt);
 
                             // save the piece into filePieces by index
                             System.arraycopy(message,9,P2PFileProcess.filePieces[pieceIDInt],0, Math.min(message.length - 9, P2PFileProcess.filePieces[pieceIDInt].length));
@@ -408,7 +398,7 @@ public class P2PMessageProcess {
                             }
                             //identify combine pieces into a file when the condition is satisfied
                             if (combineFlag) {
-                                P2PFileProcess.combinePieces(id);
+                                //P2PFileProcess.combinePieces(id);
                                 System.out.println("the file has been completed");
                                 P2PFileProcess.Log(id, P2PFileProcess.LOG_COMPLETE);
 
@@ -459,6 +449,28 @@ public class P2PMessageProcess {
             sendActualMsg(MSG_UN_CHOKE,peerMap.get(Main.optimPeer).getOut());
             optimTimer = System.currentTimeMillis(); // update time
             P2PFileProcess.Log(id,P2PFileProcess.LOG_OPTIMISTIC,Main.optimPeer);
+        }
+    }
+
+    /**
+     * delete related index from map
+     * @param pieceIDInt input integer that represent index that we want to delete
+     */
+    private synchronized void deleteMap(int pieceIDInt) {
+        List<Integer> nullList = new LinkedList<>();
+        for (Integer ID : interestingMap.keySet()) {
+            //remove interesting part
+            if (interestingMap.get(ID).contains(pieceIDInt)) {
+                interestingMap.get(ID).remove(Integer.valueOf(pieceIDInt));
+            }
+            //record map whose value list is null
+            if (interestingMap.get(ID).size() == 0) {
+                nullList.add(ID);
+            }
+        }
+        //delete related map whose value list is null
+        for (Integer ID : nullList) {
+            interestingMap.remove(ID);
         }
     }
 
