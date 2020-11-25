@@ -15,7 +15,7 @@ public class P2PFileProcess {
     // parameters for common.cfg
     int NumberOfPreferredNeighbors;
     int UnchokingInterval;
-    int OptimisticUnchokingInterval;
+    static int OptimisticUnchokingInterval;
     static String FileName;
     public static int FileSize;
     public static int PieceSize;
@@ -202,7 +202,7 @@ public class P2PFileProcess {
                         cnt++;
                         break;
                     case "OptimisticUnchokingInterval":
-                        this.OptimisticUnchokingInterval = Integer.parseInt(line[1]);
+                        OptimisticUnchokingInterval = Integer.parseInt(line[1]);
                         cnt++;
                         break;
                     case "FileName":
@@ -365,7 +365,7 @@ public class P2PFileProcess {
                     fw.write("[" + ts + "]: Peer " + ID1 + " is choked by " + args[0] + ".\n");
                     break;
                 case LOG_HAVE:
-                    fw.write("[" + ts + "]: Peer " + ID1 + " received the 'have' message from " + args[0] + "for the piece " + args[1] + ".\n");
+                    fw.write("[" + ts + "]: Peer " + ID1 + " received the 'have' message from " + args[0] + " for the piece " + args[1] + ".\n");
                     break;
                 case LOG_INTEREST:
                     fw.write("[" + ts + "]: Peer " + ID1 + " received the 'interested' message from " + args[0] + ".\n");

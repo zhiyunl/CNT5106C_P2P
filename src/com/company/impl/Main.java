@@ -15,6 +15,7 @@ public class Main {
     public static List<Integer> processingList = new LinkedList<>();
     public static int firstPeerID;
     public static byte[] field;
+    public static int optimPeer;
 
     private Main(int id) {
         P2PFileProcess p2PFileProcess = new P2PFileProcess();

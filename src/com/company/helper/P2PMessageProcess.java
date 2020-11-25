@@ -10,6 +10,9 @@ import java.util.*;
 public class P2PMessageProcess {
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
     public static int id;
+    private long optimTimer=System.currentTimeMillis();
+    private Set<Integer> unchokeSet; // the peer that I unchoked
+    private Set<Integer> chokeMeSet; // the peer that choked me
     private Map<Integer, Peer> peerMap = new HashMap<>();
     private Map<Integer, List<Integer>> interestingMap = new HashMap<>();
     private static final int MSG_CHOKE= 0;
@@ -224,10 +227,7 @@ public class P2PMessageProcess {
                     interestingMap.remove(peerId);
                 }
             }
-
         }
-
-
     }
 
     /**
@@ -240,7 +240,7 @@ public class P2PMessageProcess {
     public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) throws IOException {
         boolean flag;
         byte[] peerBitField; // corresponding BitField
-
+        optimTimer = System.currentTimeMillis();
         while(true)
         {
             //identify whether system should be terminated
@@ -251,7 +251,10 @@ public class P2PMessageProcess {
                 }
                 System.exit(0);
             }
-
+            // choose the optimistic unchoke peer
+            selectOptimisticPeer();
+            // send out unchoke msg
+            sendActualMsg(MSG_UN_CHOKE,peerMap.get(Main.optimPeer).getOut());
             //message received from the client
             try {
                 byte[] message = (byte[]) in.readObject();
@@ -433,6 +436,27 @@ public class P2PMessageProcess {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+
+    /**
+     * reselect a new random optimistic unchoke peer
+     *
+     */
+    private void selectOptimisticPeer() {
+        // check time
+        if (System.currentTimeMillis()-optimTimer >= 1000*P2PFileProcess.OptimisticUnchokingInterval){
+            // save all possible peers
+            List<Integer> optimPeers=new ArrayList<>();
+            for(int peerID:interestingMap.keySet()){
+                if(!unchokeSet.contains(peerID)){
+                    optimPeers.add(peerID);
+                }
+            }
+            // choose random peer
+            Main.optimPeer = optimPeers.get(new Random().nextInt(optimPeers.size()));
+            optimTimer = System.currentTimeMillis(); // update time
         }
     }
 
