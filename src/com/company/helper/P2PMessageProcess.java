@@ -237,7 +237,7 @@ public class P2PMessageProcess {
      * @param peerID peer ID
      *
      */
-    public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) throws IOException {
+    public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) {
         boolean flag;
         byte[] peerBitField; // corresponding BitField
         optimTimer = System.currentTimeMillis();
@@ -253,8 +253,7 @@ public class P2PMessageProcess {
             }
             // choose the optimistic unchoke peer
             selectOptimisticPeer();
-            // send out unchoke msg
-            sendActualMsg(MSG_UN_CHOKE,peerMap.get(Main.optimPeer).getOut());
+
             //message received from the client
             try {
                 byte[] message = (byte[]) in.readObject();
@@ -456,7 +455,10 @@ public class P2PMessageProcess {
             }
             // choose random peer
             Main.optimPeer = optimPeers.get(new Random().nextInt(optimPeers.size()));
+            // send out unchoke msg
+            sendActualMsg(MSG_UN_CHOKE,peerMap.get(Main.optimPeer).getOut());
             optimTimer = System.currentTimeMillis(); // update time
+            P2PFileProcess.Log(id,P2PFileProcess.LOG_OPTIMISTIC,Main.optimPeer);
         }
     }
 
