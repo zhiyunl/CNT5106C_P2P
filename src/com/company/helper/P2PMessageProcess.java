@@ -2,26 +2,30 @@ package com.company.helper;
 
 import com.company.impl.Main;
 import com.company.peer.Peer;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class P2PMessageProcess {
     private static final String peerHeaderValue = "P2PFILESHARINGPROJ";
     public static int id;
-    private long optimTimer=System.currentTimeMillis();
-    private Set<Integer> unchokeSet; // the peer that I unchoked
+    private long optimTimer = System.currentTimeMillis();
+    private long unchokeTimer = System.currentTimeMillis();
+    private Set<Integer> unchokeSet = new HashSet<>(); // the peer that I unchoked
     private Set<Integer> chokeMeSet; // the peer that choked me
     private Map<Integer, Peer> peerMap = new HashMap<>();
     private Map<Integer, List<Integer>> interestingMap = new HashMap<>();
-    private static final int MSG_CHOKE= 0;
-    private static final int MSG_UN_CHOKE= 1;
-    private static final int MSG_INTERESTED= 2;
-    private static final int MSG_NOT_INTERESTED= 3;
-    private static final int MSG_HAVE= 4;
-    private static final int MSG_BIT_FIELD= 5;
-    private static final int MSG_REQUEST= 6;
+    private Map<Integer, Integer> interestedInMe = new HashMap<>(); // the peers who interested in this peer
+    private static final int MSG_CHOKE = 0;
+    private static final int MSG_UN_CHOKE = 1;
+    private static final int MSG_INTERESTED = 2;
+    private static final int MSG_NOT_INTERESTED = 3;
+    private static final int MSG_HAVE = 4;
+    private static final int MSG_BIT_FIELD = 5;
+    private static final int MSG_REQUEST = 6;
     private static final int MSG_PIECE = 7;
     private static final int MSG_FINISH = 8;
     private static final int MSG_ALL_FINISH = 9;
@@ -32,8 +36,8 @@ public class P2PMessageProcess {
 
     /**
      * send handshake message
-     * @param out output stream to send message
      *
+     * @param out output stream to send message
      */
     public void sendHandShakeMsg(ObjectOutputStream out) {
         byte[] result = new byte[32];
@@ -43,11 +47,9 @@ public class P2PMessageProcess {
         for (int i = 0; i < 32; i++) {
             if (i < 18) {
                 result[i] = header[i];
-            }
-            else if (i > 27) {
+            } else if (i > 27) {
                 result[i] = idArray[i - 28];
-            }
-            else {
+            } else {
                 result[i] = 0;
             }
         }
@@ -57,17 +59,18 @@ public class P2PMessageProcess {
 
     /**
      * initialize peer map
+     *
      * @param peerId ID of peer
-     * @param peer object of peer
+     * @param peer   object of peer
      */
     public void constructPeerMap(int peerId, Peer peer) {
-       peerMap.put(peerId, peer);
+        peerMap.put(peerId, peer);
     }
 
     /**
      * send BitField message
-     * @param out output stream to send message
      *
+     * @param out output stream to send message
      */
     public void sendBitField(ObjectOutputStream out) {
         if (!isEmptyBitField()) {
@@ -81,11 +84,9 @@ public class P2PMessageProcess {
         for (int i = 0; i < result.length; i++) {
             if (i < 4) {
                 result[i] = fieldLength[i];
-            }
-            else if (i == 4) {
+            } else if (i == 4) {
                 result[i] = type[3];
-            }
-            else {
+            } else {
                 result[i] = Main.field[i - 5];
             }
         }
@@ -95,9 +96,10 @@ public class P2PMessageProcess {
 
     /**
      * send request or have message
-     * @param type indicate the type of actual message
+     *
+     * @param type  indicate the type of actual message
      * @param index indicate the index of piece that it wants to request
-     * @param out output stream to send message
+     * @param out   output stream to send message
      */
     private void sendRequestHaveMsg(int type, int index, ObjectOutputStream out) {
         byte[] result = new byte[9];
@@ -113,32 +115,32 @@ public class P2PMessageProcess {
 
     /**
      * send piece to another peer
-     * @param pieceIndex index of the requested piece
      *
+     * @param pieceIndex index of the requested piece
      */
-    private void sendPiece(byte[] pieceIndex, ObjectOutputStream out){
+    private void sendPiece(byte[] pieceIndex, ObjectOutputStream out) {
         // TODO check piece index is valid
         // msg = length+type+[index+piece]
         byte[] pieceContent = P2PFileProcess.getPiece(byteArrayToInt(pieceIndex));
         int pieceSize = pieceContent.length;
-        byte[] msg = new byte[5+4+pieceSize];
+        byte[] msg = new byte[5 + 4 + pieceSize];
         byte[] msgLength = intToByteArray(5 + pieceSize);
         byte type = intToByteArray(MSG_PIECE)[3]; // only last byte
 
         // ArrayCopy args: source array, start point, des array, start point, length
-        System.arraycopy(msgLength,0,msg,0,4); // 1-4 bytes: msg length
+        System.arraycopy(msgLength, 0, msg, 0, 4); // 1-4 bytes: msg length
         msg[4] = type; // 5th byte: msg type
-        System.arraycopy(pieceIndex,0,msg,5,4);// 6-10 bytes: pieceIndex
+        System.arraycopy(pieceIndex, 0, msg, 5, 4);// 6-10 bytes: pieceIndex
         // 9 - remaining bytes: piece
-        System.arraycopy(pieceContent,0,msg,9, pieceSize);
+        System.arraycopy(pieceContent, 0, msg, 9, pieceSize);
         sendMessage(msg, out);
     }
 
     /**
      * generate and send actual choke, unchoke, interested, not interested msg
-     * @param type one of the four types
-     * @param out output stream to send message
      *
+     * @param type one of the four types
+     * @param out  output stream to send message
      */
     private void sendActualMsg(int type, ObjectOutputStream out) {
         byte[] message = new byte[5];
@@ -158,9 +160,9 @@ public class P2PMessageProcess {
 
     /**
      * decide interested to the peer or not
-     * @param message message received from peer
-     * @param out output stream to send message
      *
+     * @param message message received from peer
+     * @param out     output stream to send message
      */
     private void interestOrNot(byte[] message, ObjectOutputStream out, int peerID) {
         boolean flag;
@@ -180,12 +182,13 @@ public class P2PMessageProcess {
 
     /**
      * find interesting pieces that this peer doesn't have but its neighbour has. And return the index of piece with list
+     *
      * @return List<Integer>
      */
     private List<Integer> findInterestingPieces(int peerId) {
         List<Integer> result = new LinkedList<>();
         byte[] peerList = Main.peersBitField.get(peerId);
-        for (int i = 0; i <Main.field.length; i++) {
+        for (int i = 0; i < Main.field.length; i++) {
             if (Main.field[i] == 0 && peerList[i] == 1) {
                 result.add(i);
             }
@@ -199,7 +202,6 @@ public class P2PMessageProcess {
 
     /**
      * select a random piece index from interesting map's list
-     *
      */
     private void selectRandomPiece(int peerId, ObjectOutputStream out) {
         Random rand = new Random();
@@ -229,16 +231,16 @@ public class P2PMessageProcess {
 
     /**
      * handle actual message in this function
-     * @param in input stream to receive message
-     * @param out output stream to send message
-     * @param peerID peer ID
      *
+     * @param in     input stream to receive message
+     * @param out    output stream to send message
+     * @param peerID peer ID
      */
     public void handleActualMsg(ObjectInputStream in, ObjectOutputStream out, int peerID) {
         byte[] peerBitField; // corresponding BitField
         optimTimer = System.currentTimeMillis();
-        while(true)
-        {
+        unchokeTimer = System.currentTimeMillis();
+        while (true) {
             //identify whether system should be terminated
             if (id == Main.firstPeerID && Main.processingList.size() == 0) {
                 System.out.println("all peers have finished their task, the system will be terminated");
@@ -247,6 +249,9 @@ public class P2PMessageProcess {
                 }
                 System.exit(0);
             }
+
+            // select preferred neighbors
+            selectPreferredNeighbors();
             // choose the optimistic unchoke peer
             selectOptimisticPeer();
 
@@ -255,7 +260,7 @@ public class P2PMessageProcess {
                 byte[] message = (byte[]) in.readObject();
                 int type = message[4];
 
-                switch (type){
+                switch (type) {
                     case MSG_CHOKE:
                         System.out.println("received choke, parse and update choke list");
                         // TODO parse CHOKE msg
@@ -270,33 +275,38 @@ public class P2PMessageProcess {
                         System.out.println("interested time");
                         P2PFileProcess.Log(id, P2PFileProcess.LOG_INTEREST, peerID);
                         // TODO parse INTEREST msg
+                        interestedInMe.put(peerID, 0); // initially, 0 piece received from peerID
+//                        System.out.println("after put: " + interestedInMe);
+
 
                         break;
                     case MSG_NOT_INTERESTED:
                         System.out.println("not_interested time");
                         P2PFileProcess.Log(id, P2PFileProcess.LOG_NOTINTEREST, peerID);
                         // TODO parse NOT_INTEREST msg
+                        interestedInMe.remove(peerID);
+//                        System.out.println("after remove" + interestedInMe);
 
                         break;
                     case MSG_HAVE:
                         System.out.println("received have msg, update bit field and send interest/not back");
 
                         // update peer BitField
-                       synchronized (this) {
-                           byte[] havePieceID = new byte[4];
-                           System.arraycopy(message, 5, havePieceID, 0, 4);
-                           if (!Main.peersBitField.containsKey(peerID)) {
-                               Main.peersBitField.put(peerID, new byte[P2PFileProcess.getTotalPieces()]);
-                           }
-                           peerBitField = Main.peersBitField.get(peerID);
-                           peerBitField[byteArrayToInt(havePieceID)] = 1;
+                        synchronized (this) {
+                            byte[] havePieceID = new byte[4];
+                            System.arraycopy(message, 5, havePieceID, 0, 4);
+                            if (!Main.peersBitField.containsKey(peerID)) {
+                                Main.peersBitField.put(peerID, new byte[P2PFileProcess.getTotalPieces()]);
+                            }
+                            peerBitField = Main.peersBitField.get(peerID);
+                            peerBitField[byteArrayToInt(havePieceID)] = 1;
 
-                           //log have related message
-                           P2PFileProcess.Log(id, P2PFileProcess.LOG_HAVE, peerID, byteArrayToInt(havePieceID));
+                            //log have related message
+                            P2PFileProcess.Log(id, P2PFileProcess.LOG_HAVE, peerID, byteArrayToInt(havePieceID));
 
-                           // send an interested/non-interested message
-                           interestOrNot(Main.peersBitField.get(peerID), out, peerID);
-                       }
+                            // send an interested/non-interested message
+                            interestOrNot(Main.peersBitField.get(peerID), out, peerID);
+                        }
                         break;
                     case MSG_BIT_FIELD:
                         System.out.println("Received bitfield: ");
@@ -320,8 +330,7 @@ public class P2PMessageProcess {
                             if (interestingMap.containsKey(peerID)) {
                                 sendActualMsg(MSG_INTERESTED, out);
                                 selectRandomPiece(peerID, out);
-                            }
-                            else {
+                            } else {
                                 sendActualMsg(MSG_NOT_INTERESTED, out);
                             }
                             //interestOrNot(Main.peersBitField.get(peerID), out);
@@ -333,15 +342,19 @@ public class P2PMessageProcess {
                         // TODO parse the request and get the pieceIndex
                         System.arraycopy(message, 5, requestPieceID, 0, 4);
                         // send out piece
-                        sendPiece(requestPieceID,out);
+                        sendPiece(requestPieceID, out);
                         break;
                     case MSG_PIECE:
                         System.out.println("received piece msg, save it and update bit field.");
 
                         synchronized (this) {
+                            // received piece number plus 1
+                            if (interestedInMe.containsKey(peerID)) {
+                                interestedInMe.put(peerID, interestedInMe.get(peerID) + 1);
+                            }
                             // TODO save piece
                             byte[] pieceID = new byte[4];
-                            System.arraycopy(message,5,pieceID,0,4); // get pieceID (byte[])
+                            System.arraycopy(message, 5, pieceID, 0, 4); // get pieceID (byte[])
                             // git the index of piece
                             int pieceIDInt = byteArrayToInt(pieceID);
                             // update this BitField
@@ -351,7 +364,7 @@ public class P2PMessageProcess {
                             deleteMap(pieceIDInt);
 
                             // save the piece into filePieces by index
-                            System.arraycopy(message,9,P2PFileProcess.filePieces[pieceIDInt],0, Math.min(message.length - 9, P2PFileProcess.filePieces[pieceIDInt].length));
+                            System.arraycopy(message, 9, P2PFileProcess.filePieces[pieceIDInt], 0, Math.min(message.length - 9, P2PFileProcess.filePieces[pieceIDInt].length));
 
                             //send have message to neighbours
                             sendRequestHaveMsg(MSG_HAVE, pieceIDInt, out);
@@ -382,12 +395,12 @@ public class P2PMessageProcess {
 
                             // get current # of pieces
                             int sum = 0;
-                            for (byte a : Main.field){
+                            for (byte a : Main.field) {
                                 if (a == 1) {
-                                    sum+=a;
+                                    sum += a;
                                 }
                             }
-                            P2PFileProcess.Log(id,P2PFileProcess.LOG_DOWNLOAD,peerID,pieceIDInt,sum);
+                            P2PFileProcess.Log(id, P2PFileProcess.LOG_DOWNLOAD, peerID, pieceIDInt, sum);
 
                             //identify combine condition
                             boolean combineFlag = true;
@@ -428,32 +441,142 @@ public class P2PMessageProcess {
         }
     }
 
+    /**
+     * select preferred neighbors every unchoke interval time
+     */
+    private void selectPreferredNeighbors() {
+        // check time
+        if (System.currentTimeMillis() - unchokeTimer >= 1000 * P2PFileProcess.UnchokingInterval) {
+            // check whether the peer has complete file
+            boolean flag = true; // default it has the complete file
+            for (int i = 0; i < Main.field.length; i++) {
+                if (Main.field[i] == 0) {
+                    flag = false;
+                    break;
+                }
+            }
+
+            if (flag == false) {
+                // compare download rate and send unchoke/choke messages
+                compareDownloadRate();
+            } else {
+                // randomly select and send unchoke/choke messages
+                ArrayList<Integer> neighbors = new ArrayList<>();
+                for (int peerID : interestedInMe.keySet()) {
+                    neighbors.add(peerID);
+                }
+                // choose random peer
+                int[] arr = new int[P2PFileProcess.NumberOfPreferredNeighbors];
+                for (int i = 0; i < arr.length; i++) {
+                    if (i < neighbors.size()) {
+                        Random r = new Random();
+                        int uc = r.nextInt(neighbors.size());
+                        int ID = neighbors.get(uc);
+                        arr[i] = ID;
+                        // send unchoke message, only send if the peerID is not already unchoked
+                        if (!unchokeSet.contains(ID)) {
+                            sendActualMsg(MSG_UN_CHOKE, peerMap.get(ID).getOut());
+                            P2PFileProcess.Log(id, P2PFileProcess.LOG_UNCHOKING, ID);
+                        }
+                        neighbors.remove(uc);
+                    }
+                }
+                // send choke message to not selected neighbors
+                for (Integer i : neighbors) {
+                    sendActualMsg(MSG_CHOKE, peerMap.get(i).getOut());
+                    P2PFileProcess.Log(id, P2PFileProcess.LOG_CHOKING, i);
+                }
+                // update unchoke set
+                if (!unchokeSet.isEmpty()) {
+                    unchokeSet.clear();
+                }
+                for (int i = 0; i < arr.length; i++) {
+                    unchokeSet.add(arr[i]);
+                }
+            }
+            interestedInMe.clear();
+            unchokeTimer = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * calculate and compare download rate, select peers with the highest download rate
+     */
+    private void compareDownloadRate() {
+        // calculate download rates of all peers interested in this peer
+        HashMap<Integer, Double> downloadRates = new HashMap<>();
+        for (Map.Entry<Integer, Integer> peer : interestedInMe.entrySet()) {
+            double dr = peer.getValue() * P2PFileProcess.PieceSize * 1.0 / P2PFileProcess.UnchokingInterval;
+            downloadRates.put(peer.getKey(), dr);
+        }
+
+        // sort the download rates
+        List<Map.Entry<Integer, Double>> list = new ArrayList<Map.Entry<Integer, Double>>(downloadRates.entrySet());
+        Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
+            @Override
+            public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
+                return o2.getValue().compareTo(o1.getValue());
+            }
+        });
+        for (Map.Entry<Integer, Double> mapping : list) {
+            System.out.println(mapping.getKey() + ": " + mapping.getValue());
+        }
+
+        // select NumberOfPreferredNeighbors peers with highest rate
+        int[] arr = new int[P2PFileProcess.NumberOfPreferredNeighbors];
+        int num = 0;
+        for (Map.Entry<Integer, Double> mapping : list) {
+            if (num < arr.length) {
+                arr[num] = mapping.getKey();
+                if (!unchokeSet.contains(mapping.getKey())) {
+                    sendActualMsg(MSG_UN_CHOKE, peerMap.get(mapping.getKey()).getOut());
+                    P2PFileProcess.Log(id, P2PFileProcess.LOG_UNCHOKING, mapping.getKey());
+                }
+                list.remove(mapping);
+                num++;
+            } else {
+                break;
+            }
+        }
+        // send choke message to not selected neighbors
+        for (Map.Entry<Integer, Double> mapping : list) {
+            sendActualMsg(MSG_CHOKE, peerMap.get(mapping.getKey()).getOut());
+            P2PFileProcess.Log(id, P2PFileProcess.LOG_CHOKING, mapping.getKey());
+        }
+        // update unchoke set
+        if (!unchokeSet.isEmpty()) {
+            unchokeSet.clear();
+        }
+        for (int i = 0; i < arr.length; i++) {
+            unchokeSet.add(arr[i]);
+        }
+    }
 
     /**
      * reselect a new random optimistic unchoke peer
-     *
      */
     private void selectOptimisticPeer() {
         // check time
-        if (System.currentTimeMillis()-optimTimer >= 1000*P2PFileProcess.OptimisticUnchokingInterval){
+        if (System.currentTimeMillis() - optimTimer >= 1000 * P2PFileProcess.OptimisticUnchokingInterval) {
             // save all possible peers
-            List<Integer> optimPeers=new ArrayList<>();
-            for(int peerID:interestingMap.keySet()){
-                if(!unchokeSet.contains(peerID)){
+            List<Integer> optimPeers = new ArrayList<>();
+            for (int peerID : interestingMap.keySet()) {
+                if (!unchokeSet.contains(peerID)) {
                     optimPeers.add(peerID);
                 }
             }
             // choose random peer
             Main.optimPeer = optimPeers.get(new Random().nextInt(optimPeers.size()));
             // send out unchoke msg
-            sendActualMsg(MSG_UN_CHOKE,peerMap.get(Main.optimPeer).getOut());
+            sendActualMsg(MSG_UN_CHOKE, peerMap.get(Main.optimPeer).getOut());
             optimTimer = System.currentTimeMillis(); // update time
-            P2PFileProcess.Log(id,P2PFileProcess.LOG_OPTIMISTIC,Main.optimPeer);
+            P2PFileProcess.Log(id, P2PFileProcess.LOG_OPTIMISTIC, Main.optimPeer);
         }
     }
 
     /**
      * delete related index from map
+     *
      * @param pieceIDInt input integer that represent index that we want to delete
      */
     private synchronized void deleteMap(int pieceIDInt) {
@@ -476,34 +599,37 @@ public class P2PMessageProcess {
 
     /**
      * transfer int to byte array
+     *
      * @param i input integer that we need to transfer
      * @return byte array
      */
     private static byte[] intToByteArray(int i) {
         byte[] result = new byte[4];
-        result[0] = (byte)((i >> 24) & 0xFF);
-        result[1] = (byte)((i >> 16) & 0xFF);
-        result[2] = (byte)((i >> 8) & 0xFF);
-        result[3] = (byte)(i & 0xFF);
+        result[0] = (byte) ((i >> 24) & 0xFF);
+        result[1] = (byte) ((i >> 16) & 0xFF);
+        result[2] = (byte) ((i >> 8) & 0xFF);
+        result[3] = (byte) (i & 0xFF);
         return result;
     }
 
     /**
      * transfer byte to int array
+     *
      * @param bytes input byte array that we need to transfer
      * @return int value
      */
     private int byteArrayToInt(byte[] bytes) {
-        int value=0;
-        for(int i = 0; i < 4; i++) {
-            int shift= (3-i) * 8;
-            value +=(bytes[i] & 0xFF) << shift;
+        int value = 0;
+        for (int i = 0; i < 4; i++) {
+            int shift = (3 - i) * 8;
+            value += (bytes[i] & 0xFF) << shift;
         }
         return value;
     }
 
     /**
      * get peer's header from the handshake message
+     *
      * @param handshakeMsg handshake message that we received
      * @return string value
      */
@@ -517,6 +643,7 @@ public class P2PMessageProcess {
 
     /**
      * get peer's id from the handshake message
+     *
      * @param handshakeMsg handshake message that we received
      * @return int value
      */
@@ -530,6 +657,7 @@ public class P2PMessageProcess {
 
     /**
      * identify whether it has pieces
+     *
      * @return boolean value
      */
     private boolean isEmptyBitField() {
@@ -547,20 +675,16 @@ public class P2PMessageProcess {
 
     /**
      * send message to other peers
-     * @param
-     * message byte message that will be sent
-     * @param
-     * out output stream
      *
+     * @param message byte message that will be sent
+     * @param out     output stream
      */
-    private void sendMessage(byte[] message, ObjectOutputStream out)
-    {
-        try{
+    private void sendMessage(byte[] message, ObjectOutputStream out) {
+        try {
             //stream write the message
             out.writeObject(message);
             out.flush();
-        }
-        catch(IOException ioException){
+        } catch (IOException ioException) {
             ioException.printStackTrace();
         }
     }

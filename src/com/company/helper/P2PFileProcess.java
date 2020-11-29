@@ -13,8 +13,8 @@ import java.util.*;
 public class P2PFileProcess {
 
     // parameters for common.cfg
-    int NumberOfPreferredNeighbors;
-    int UnchokingInterval;
+    static int NumberOfPreferredNeighbors;
+    static int UnchokingInterval;
     static int OptimisticUnchokingInterval;
     static String FileName;
     public static int FileSize;
