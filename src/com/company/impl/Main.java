@@ -2,20 +2,19 @@ package com.company.impl;
 
 import com.company.helper.P2PFileProcess;
 import com.company.helper.P2PMessageProcess;
-import com.company.peer.Peer;
 import com.company.peer.PeerListener;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
 
-    public static Map<Integer, byte[]> peersBitField = new HashMap<>(); // HashMap for storing peers id and corresponding BitField
+    public static Map<Integer, byte[]> peersBitField = new ConcurrentHashMap<>(); // HashMap for storing peers id and corresponding BitField
     public static List<Integer> processingList = new LinkedList<>();
     public static int firstPeerID;
     public static byte[] field;
-    public static int optimPeer;
+    public static int optimalPeer;
 
     private Main(int id) {
         P2PFileProcess p2PFileProcess = new P2PFileProcess();
