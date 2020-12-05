@@ -15,15 +15,15 @@ public class P2PMessageProcess {
     public static int id;
     //private long optimalTimer = System.currentTimeMillis();
     //private long UnChokeTimer = System.currentTimeMillis();
-    private Set<Integer> UnChokeSet = new HashSet<>(); // the peer UnChoked
-    private Set<Integer> optimalUnChokeSet = new HashSet<>(); // the peer optimal UnChoked
+    private static Set<Integer> UnChokeSet = new HashSet<>(); // the peer UnChoked
+    private static Set<Integer> optimalUnChokeSet = new HashSet<>(); // the peer optimal UnChoked
     //private Set<Integer> chokeMeSet; // the peer that choked me
     private boolean firstInterestedFlag = false;
     private CountTask unChokeCountTask;
     private CountTask optimalUnChokeCountTask;
-    private Map<Integer, Peer> peerMap = new ConcurrentHashMap<>();
-    private Map<Integer, List<Integer>> interestingMap = new ConcurrentHashMap<>();
-    private Map<Integer, Integer> interestedInMe = new ConcurrentHashMap<>(); // the peers who interested in this peer
+    private static Map<Integer, Peer> peerMap = new ConcurrentHashMap<>();
+    private static Map<Integer, List<Integer>> interestingMap = new ConcurrentHashMap<>();
+    private static Map<Integer, Integer> interestedInMe = new ConcurrentHashMap<>(); // the peers who interested in this peer
     private static final int MSG_CHOKE = 0;
     private static final int MSG_UN_CHOKE = 1;
     private static final int MSG_INTERESTED = 2;
@@ -208,19 +208,20 @@ public class P2PMessageProcess {
     /**
      * select a random piece index from interesting map's list
      */
-    private synchronized void selectRandomPiece(int peerId, ObjectOutputStream out) {
-        Random rand = new Random();
-        while (interestingMap.containsKey(peerId)) {
-            int index = rand.nextInt(interestingMap.get(peerId).size());
+    private void selectRandomPiece(int peerId, ObjectOutputStream out) {
+        synchronized (P2PMessageProcess.class) {
+            Random rand = new Random();
+            while (interestingMap.containsKey(peerId)) {
+                int index = rand.nextInt(interestingMap.get(peerId).size());
 
-            if (Main.field[interestingMap.get(peerId).get(index)] == 0) {
-                //change field bit to 2 in order to represent this piece is requesting from other neighbours
-                Main.field[interestingMap.get(peerId).get(index)] = 2;
-                sendRequestHaveMsg(MSG_REQUEST, interestingMap.get(peerId).get(index), out);
-                //delete index from map which has been requested
-                deleteMap(interestingMap.get(peerId).get(index));
-                break;
-            }
+                if (Main.field[interestingMap.get(peerId).get(index)] == 0) {
+                    //change field bit to 2 in order to represent this piece is requesting from other neighbours
+                    Main.field[interestingMap.get(peerId).get(index)] = 2;
+                    sendRequestHaveMsg(MSG_REQUEST, interestingMap.get(peerId).get(index), out);
+                    //delete index from map which has been requested
+                    deleteMap(interestingMap.get(peerId).get(index));
+                    break;
+                }
 //            else {
 //                //System.out.println("the main field index is:" + "----------------" + Main.field[interestingMap.get(peerId).get(index)]);
 //                interestingMap.get(peerId).remove(index);
@@ -229,7 +230,9 @@ public class P2PMessageProcess {
 //                }
 //            }
 
+            }
         }
+
 
 
     }
@@ -253,6 +256,8 @@ public class P2PMessageProcess {
                     sendActualMsg(MSG_ALL_FINISH, peerMap.get(key).getOut());
                 }
 
+                P2PFileProcess.Log(id, P2PFileProcess.LOG_STOP, id);
+
                 System.exit(0);
             }
 
@@ -270,11 +275,13 @@ public class P2PMessageProcess {
                     case MSG_CHOKE:
                         System.out.println("received choke, parse and update choke list");
                         // TODO parse CHOKE msg
+                        P2PFileProcess.Log(id, P2PFileProcess.LOG_CHOKING, peerID);
 
                         break;
                     case MSG_UN_CHOKE:
                         System.out.println("received unchoke, parse it and update");
                         // TODO parse UNCHOKE msg
+                        P2PFileProcess.Log(id, P2PFileProcess.LOG_UNCHOKING, peerID);
 
                         break;
                     case MSG_INTERESTED:
@@ -285,7 +292,7 @@ public class P2PMessageProcess {
                             interestedInMe.put(peerID, 0); // initially, 0 piece received from peerID
                         }
 
-                        synchronized (this) {
+                        synchronized (P2PMessageProcess.class) {
                             if (!firstInterestedFlag) {
                                 Timer time = new Timer();
                                 Date now = new Date();
@@ -314,7 +321,7 @@ public class P2PMessageProcess {
                         System.out.println("received have msg, update bit field and send interest/not back");
 
                         // update peer BitField
-                        synchronized (this) {
+                        synchronized (P2PMessageProcess.class) {
                             byte[] havePieceID = new byte[4];
                             System.arraycopy(message, 5, havePieceID, 0, 4);
                             if (!Main.peersBitField.containsKey(peerID)) {
@@ -332,7 +339,7 @@ public class P2PMessageProcess {
                         break;
                     case MSG_BIT_FIELD:
                         System.out.println("Received bitfield: ");
-                        synchronized (this) {
+                        synchronized (P2PMessageProcess.class) {
                             for (byte b : message) {
                                 System.out.print(b + " ");
                             }
@@ -376,7 +383,7 @@ public class P2PMessageProcess {
                     case MSG_PIECE:
                         System.out.println("received piece msg, save it and update bit field.");
 
-                        synchronized (this) {
+                        synchronized (P2PMessageProcess.class) {
                             // received piece number plus 1
                             if (interestedInMe.containsKey(peerID)) {
                                 interestedInMe.put(peerID, interestedInMe.get(peerID) + 1);
@@ -464,6 +471,7 @@ public class P2PMessageProcess {
                         break;
                     case MSG_ALL_FINISH:
                         System.out.println("ALL peers have finished his task");
+                        P2PFileProcess.Log(id, P2PFileProcess.LOG_STOP, id);
                         System.exit(0);
                         break;
                     default:
@@ -481,7 +489,6 @@ public class P2PMessageProcess {
      * select preferred neighbors every UnChoke interval time
      */
     public synchronized void selectPreferredNeighbors() {
-        // check time
         if (interestedInMe != null && interestedInMe.size() > 0) {
             // check whether the peer has complete file
             boolean flag = true; // default it has the complete file
@@ -512,7 +519,7 @@ public class P2PMessageProcess {
                         if (!UnChokeSet.contains(ID)) {
                             System.out.println("--------------------compete random UnChoke part-------------------------------");
                             sendActualMsg(MSG_UN_CHOKE, peerMap.get(ID).getOut());
-                            P2PFileProcess.Log(id, P2PFileProcess.LOG_UNCHOKING, ID);
+                            //P2PFileProcess.Log(id, P2PFileProcess.LOG_UNCHOKING, ID);
                         }
                         neighbors.remove(uc);
                     }
@@ -520,12 +527,15 @@ public class P2PMessageProcess {
                 // send choke message to not selected neighbors
                 for (Integer i : neighbors) {
                     sendActualMsg(MSG_CHOKE, peerMap.get(i).getOut());
-                    P2PFileProcess.Log(id, P2PFileProcess.LOG_CHOKING, i);
+                    //P2PFileProcess.Log(id, P2PFileProcess.LOG_CHOKING, i);
                 }
                 // update UnChoke set
                 if (!UnChokeSet.isEmpty()) {
                     UnChokeSet.clear();
                 }
+
+                P2PFileProcess.Log(id, P2PFileProcess.LOG_PREFER, arr);
+
                 for (int i1 : arr) {
                     UnChokeSet.add(i1);
                 }
@@ -565,7 +575,7 @@ public class P2PMessageProcess {
                 if (!UnChokeSet.contains(mapping.getKey())) {
                     System.out.println("--------------------compete rate UnChoke part-------------------------------");
                     sendActualMsg(MSG_UN_CHOKE, peerMap.get(mapping.getKey()).getOut());
-                    P2PFileProcess.Log(id, P2PFileProcess.LOG_UNCHOKING, mapping.getKey());
+                    //P2PFileProcess.Log(id, P2PFileProcess.LOG_UNCHOKING, mapping.getKey());
                 }
                 deleteUnChokeList.add(mapping);
                 num++;
@@ -582,7 +592,7 @@ public class P2PMessageProcess {
         if (list.size() > 0) {
             for (Map.Entry<Integer, Double> mapping : list) {
                 sendActualMsg(MSG_CHOKE, peerMap.get(mapping.getKey()).getOut());
-                P2PFileProcess.Log(id, P2PFileProcess.LOG_CHOKING, mapping.getKey());
+                //P2PFileProcess.Log(id, P2PFileProcess.LOG_CHOKING, mapping.getKey());
             }
         }
 
@@ -599,7 +609,6 @@ public class P2PMessageProcess {
      * reselect a new random optimistic unchoke peer
      */
     public synchronized void selectOptimisticPeer() {
-        // check time
         if (interestedInMe != null && interestedInMe.size() > 0) {
             // save all possible peers
             List<Integer> optimalPeers = new ArrayList<>();
@@ -633,22 +642,25 @@ public class P2PMessageProcess {
      *
      * @param pieceIDInt input integer that represent index that we want to delete
      */
-    private synchronized void deleteMap(int pieceIDInt) {
-        List<Integer> nullList = new LinkedList<>();
-        for (Integer ID : interestingMap.keySet()) {
-            //remove interesting part
-            if (interestingMap.get(ID).contains(pieceIDInt)) {
-                interestingMap.get(ID).remove(Integer.valueOf(pieceIDInt));
+    private void deleteMap(int pieceIDInt) {
+        synchronized (P2PMessageProcess.class) {
+            List<Integer> nullList = new LinkedList<>();
+            for (Integer ID : interestingMap.keySet()) {
+                //remove interesting part
+                if (interestingMap.get(ID).contains(pieceIDInt)) {
+                    interestingMap.get(ID).remove(Integer.valueOf(pieceIDInt));
+                }
+                //record map whose value list is null
+                if (interestingMap.get(ID).size() == 0) {
+                    nullList.add(ID);
+                }
             }
-            //record map whose value list is null
-            if (interestingMap.get(ID).size() == 0) {
-                nullList.add(ID);
+            //delete related map whose value list is null
+            for (Integer ID : nullList) {
+                interestingMap.remove(ID);
             }
         }
-        //delete related map whose value list is null
-        for (Integer ID : nullList) {
-            interestingMap.remove(ID);
-        }
+
     }
 
     /**

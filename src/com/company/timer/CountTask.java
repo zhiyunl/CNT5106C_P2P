@@ -16,12 +16,16 @@ public class CountTask extends TimerTask {
 
     @Override
     public void run() {
-        if (type == 0) {
-            p2PMessageProcess.selectPreferredNeighbors();
+
+        synchronized (CountTask.class) {
+            if (type == 0) {
+                p2PMessageProcess.selectPreferredNeighbors();
+            }
+            else if (type == 1) {
+                p2PMessageProcess.selectOptimisticPeer();
+            }
         }
-        else if (type == 1) {
-            p2PMessageProcess.selectOptimisticPeer();
-        }
+
 
 
     }

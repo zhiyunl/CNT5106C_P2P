@@ -35,6 +35,7 @@ public class P2PFileProcess {
     public final static int LOG_NOTINTEREST = 9;
     public final static int LOG_DOWNLOAD = 10;
     public final static int LOG_COMPLETE = 11;
+    public final static int LOG_STOP = 12;
 
     /**
      * Get the piece by index.
@@ -338,7 +339,7 @@ public class P2PFileProcess {
      *             In 11.Complete
      *                  args is null
      */
-    public static void Log(int ID1, int type, int... args) {
+    public synchronized static void Log(int ID1, int type, int... args) {
         // get current working directory
         String workDir = System.getProperty("user.dir");
         String logPath = workDir + File.separator + "log_peer_" + ID1 + ".log";
@@ -380,6 +381,10 @@ public class P2PFileProcess {
                 case LOG_COMPLETE:
                     fw.write("[" + ts + "]: Peer " + ID1 + " has downloaded the complete file.\n");
                     break;
+                case LOG_STOP:
+                    fw.write("[" + ts + "]: Peer " + ID1 + " has stopped system, because all peers have get all pieces of file.\n");
+                    break;
+
                 default:
                     System.out.println("wrong log type!");
                     break;
