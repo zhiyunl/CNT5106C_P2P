@@ -124,7 +124,6 @@ public class P2PMessageProcess {
      * @param pieceIndex index of the requested piece
      */
     private void sendPiece(byte[] pieceIndex, ObjectOutputStream out) {
-        // TODO check piece index is valid
         // msg = length+type+[index+piece]
         byte[] pieceContent = P2PFileProcess.getPiece(byteArrayToInt(pieceIndex));
         int pieceSize = pieceContent.length;
@@ -234,7 +233,6 @@ public class P2PMessageProcess {
         }
 
 
-
     }
 
     /**
@@ -274,20 +272,15 @@ public class P2PMessageProcess {
                 switch (type) {
                     case MSG_CHOKE:
                         System.out.println("received choke, parse and update choke list");
-                        // TODO parse CHOKE msg
                         P2PFileProcess.Log(id, P2PFileProcess.LOG_CHOKING, peerID);
-
                         break;
                     case MSG_UN_CHOKE:
                         System.out.println("received unchoke, parse it and update");
-                        // TODO parse UNCHOKE msg
                         P2PFileProcess.Log(id, P2PFileProcess.LOG_UNCHOKING, peerID);
-
                         break;
                     case MSG_INTERESTED:
                         System.out.println("interested time");
                         P2PFileProcess.Log(id, P2PFileProcess.LOG_INTEREST, peerID);
-                        // TODO parse INTEREST msg
                         if (!interestedInMe.containsKey(peerID)) {
                             interestedInMe.put(peerID, 0); // initially, 0 piece received from peerID
                         }
@@ -306,12 +299,10 @@ public class P2PMessageProcess {
 
 //                        System.out.println("after put: " + interestedInMe);
 
-
                         break;
                     case MSG_NOT_INTERESTED:
                         System.out.println("not_interested time");
                         P2PFileProcess.Log(id, P2PFileProcess.LOG_NOTINTEREST, peerID);
-                        // TODO parse NOT_INTEREST msg
                         interestedInMe.remove(peerID);
 
 //                        System.out.println("after remove" + interestedInMe);
@@ -375,7 +366,6 @@ public class P2PMessageProcess {
 
                         System.out.println("received request, parse and send piece back.");
                         byte[] requestPieceID = new byte[4];
-                        // TODO parse the request and get the pieceIndex
                         System.arraycopy(message, 5, requestPieceID, 0, 4);
                         // send out piece
                         sendPiece(requestPieceID, out);
@@ -387,12 +377,11 @@ public class P2PMessageProcess {
                             // received piece number plus 1
                             if (interestedInMe.containsKey(peerID)) {
                                 interestedInMe.put(peerID, interestedInMe.get(peerID) + 1);
-                            }
-                            else {
+                            } else {
                                 interestedInMe.put(peerID, 1);
                             }
 
-                            // TODO save piece
+                            // save piece
                             byte[] pieceID = new byte[4];
                             System.arraycopy(message, 5, pieceID, 0, 4); // get pieceID (byte[])
                             // git the index of piece

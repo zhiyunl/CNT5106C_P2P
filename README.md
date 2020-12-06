@@ -17,3 +17,10 @@ java com.company.impl.Main 1001
 Here 1001 is the ID for the peer.
 
 Note: you need to start each peer **in order**, as described in *PeerInfo.cfg*
+
+### To deploy compiled binaries onto server and run
+make sure you have generated your own ssh key pair, and have it uploaded onto server.
+Change the $username in *deploy.sh* to your own username to login lin114-00 server.
+```
+bash deploy.sh
+```

@@ -59,8 +59,7 @@ public class PeerListener extends Thread {
                 System.out.println("Client " + clientNum + " is connected!");
                 clientNum--;
             }
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 

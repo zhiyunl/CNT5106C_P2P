@@ -5,7 +5,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * File Processing and Logging.
@@ -39,6 +42,7 @@ public class P2PFileProcess {
 
     /**
      * Get the piece by index.
+     *
      * @param pieceIndex the index for the piece
      * @return the total number
      */
@@ -51,8 +55,8 @@ public class P2PFileProcess {
      */
     public static class PeerInfo {
         public int ID,
-        port,
-        hasFile;
+                port,
+                hasFile;
         public String hostName;
 
         /**
@@ -87,7 +91,7 @@ public class P2PFileProcess {
     public void initPieces(int ID) throws IOException {
         filePieces = new byte[getTotalPieces()][PieceSize];
         int peerIndex = P2PFileProcess.getPeerIndexByID(ID);
-        if (peerIndex!=-1){
+        if (peerIndex != -1) {
             String peerFolder = P2PFileProcess.initPeerFolder(ID);
             if (peers.get(peerIndex).hasFile == 1) { // check hasFile field
                 byte[] files = Files.readAllBytes(Paths.get(peerFolder + FileName));
@@ -100,46 +104,41 @@ public class P2PFileProcess {
 //                System.arraycopy(files,(total - 1) * PieceSize, filePieces[total-1],0,files.length- (total - 1)* PieceSize);
                 filePieces[total - 1] = Arrays.copyOfRange(files, (total - 1) * PieceSize, files.length);
             }
-        }else{
+        } else {
             System.out.println("peer ID Not Found!");
         }
     }
+
     /**
      * Create folder for the peer.
      *
-     * @param ID the id
+     * @param ID  the id
      * @param str the string to write
      */
-    public static void writeBack(int ID, String str){
+    public static void writeBack(int ID, String str) {
         int peerIndex = getPeerIndexByID(ID);
-        if (peerIndex == - 1) {
+        if (peerIndex == -1) {
             System.out.println("peer ID Not Found!");
-        }else{
+        } else {
             String peerFolder = initPeerFolder(ID);
             try (FileWriter fileWriter = new FileWriter(peerFolder + FileName)) {
-                    fileWriter.write(str);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                fileWriter.write(str);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
-//    /**
-//     * Get the correct project dir for running at both CMD and IDE .
-//     *
-//     * @return the path string for project
-//     */
-//    public static String getProjDir(){
-//        String path =
-//    }
+
     /**
      * Create folder for the peer.
      *
      * @param ID the id
      * @return the folder path string
      */
-    public static String initPeerFolder(int ID){
+    public static String initPeerFolder(int ID) {
         String workDir = System.getProperty("user.dir");
-        String peerFolder = workDir + File.separator + "peer_" + ID + File.separator;
+//        String peerFolder = workDir + File.separator + "peer_" + ID + File.separator;
+        String peerFolder = workDir + File.separator + ID + File.separator;
         File dir = new File(peerFolder);
         if (!dir.exists()) dir.mkdirs();// create dir if not exists.
         // Files.createDirectories(Paths.get(peerFolder));
@@ -271,7 +270,7 @@ public class P2PFileProcess {
      * @param ID the peer Process ID to generate the file
      * @return index for the peer
      */
-    public static int getPeerIndexByID(int ID){
+    public static int getPeerIndexByID(int ID) {
         for (int i = 0; i < peers.size(); i++) {
             if (ID == peers.get(i).ID) { // locate the peers by ID
                 return i;
@@ -299,8 +298,15 @@ public class P2PFileProcess {
         }
         // check hasFile and write back into file
         if (peers.get(getPeerIndexByID(ID)).hasFile == 1) { // check hasFile field
-            writeBack(ID,fileContent);
+            writeBack(ID, fileContent);
         } else {
+            // clean the file for test
+            String peerFolder = initPeerFolder(ID);
+            try {
+                boolean result = Files.deleteIfExists(Paths.get(peerFolder + FileName));
+            } catch (Exception ignored) {
+                ;
+            }
             System.out.println("This peer does not have file!");
         }
     }
@@ -329,15 +335,15 @@ public class P2PFileProcess {
      * @param type the log type
      * @param args the args for the log
      *             In connect 1.to 2.from and 4.optimistic 5.unchoking 6.choking 8.interested 9.not interested.
-     *                  args is a int: ID2
+     *             args is a int: ID2
      *             In 3.preferred
-     *                  args is a array of int: preferred neighbors ID
+     *             args is a array of int: preferred neighbors ID
      *             In 7.HAVE
-     *                  args is [ID2, pieceID]
+     *             args is [ID2, pieceID]
      *             In 10.Download
-     *                  args is [ID2, pieceID, Total number of pieces]
+     *             args is [ID2, pieceID, Total number of pieces]
      *             In 11.Complete
-     *                  args is null
+     *             args is null
      */
     public synchronized static void Log(int ID1, int type, int... args) {
         // get current working directory

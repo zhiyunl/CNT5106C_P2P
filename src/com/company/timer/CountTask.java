@@ -20,12 +20,10 @@ public class CountTask extends TimerTask {
         synchronized (CountTask.class) {
             if (type == 0) {
                 p2PMessageProcess.selectPreferredNeighbors();
-            }
-            else if (type == 1) {
+            } else if (type == 1) {
                 p2PMessageProcess.selectOptimisticPeer();
             }
         }
-
 
 
     }

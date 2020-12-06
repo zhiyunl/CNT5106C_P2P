@@ -1,6 +1,8 @@
 package com.company.peer;
+
 import com.company.helper.P2PFileProcess;
 import com.company.helper.P2PMessageProcess;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -10,7 +12,7 @@ import java.net.UnknownHostException;
 
 public class Peer extends Thread {
     private Socket connection;
-    private ObjectInputStream in;	//stream read from the socket
+    private ObjectInputStream in;    //stream read from the socket
     private ObjectOutputStream out;    //stream write to the socket
     private String state = "connection"; // the state of the program
     private P2PFileProcess.PeerInfo peerInfo = null;
@@ -35,8 +37,7 @@ public class Peer extends Thread {
                 out = new ObjectOutputStream(connection.getOutputStream());
                 out.flush();
                 in = new ObjectInputStream(connection.getInputStream());
-            }
-            else {
+            } else {
                 in = new ObjectInputStream(connection.getInputStream());
                 out = new ObjectOutputStream(connection.getOutputStream());
                 out.flush();

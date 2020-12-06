@@ -1,11 +1,13 @@
 package com.company.impl;
 
 import com.company.helper.P2PFileProcess;
-import com.company.helper.P2PMessageProcess;
 import com.company.peer.PeerListener;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
@@ -22,12 +24,12 @@ public class Main {
         try {
             //get the number of pieces that we should cut.
             p2PFileProcess.CommonCfg();
-//            int filePieces = p2PFileProcess.FileSize % p2PFileProcess.PieceSize == 0 ? p2PFileProcess.FileSize / p2PFileProcess.PieceSize : p2PFileProcess.FileSize / p2PFileProcess.PieceSize + 1;
 
             //get all peers information
             List<P2PFileProcess.PeerInfo> peersInfo = p2PFileProcess.PeerInfoCfg();
-            // generate test data
-            //p2PFileProcess.DataGeneration(id);
+            // TODO uncomment this to generate test data
+//            p2PFileProcess.DataGeneration(id);
+
             // load pieces from file into 2d byte array
             p2PFileProcess.initPieces(id);
             // init Log
@@ -46,30 +48,11 @@ public class Main {
                 }
             }
 
-//            //identify whether it has the whole file
-//            for (P2PFileProcess.PeerInfo peer : peersInfo) {
-//                if (peer.ID == id) {
-//                    hasFile = peer.hasFile;
-//                    break;
-//                }
-//            }
-//
-//            //create bit field array at the initial stage
-//            if (hasFile == 0) {
-//                Arrays.fill(field, (byte) 0);
-//            }
-//            else {
-//                Arrays.fill(field, (byte) 1);
-//            }
-
-            //initialize P2P message process helper
-            //P2PMessageProcess p2PMessageProcess = new P2PMessageProcess(id);
-
             //initialize field
             int myIndex = P2PFileProcess.getPeerIndexByID(id);
-            if (peersInfo.get(myIndex).hasFile == 0){
+            if (peersInfo.get(myIndex).hasFile == 0) {
                 Arrays.fill(field, (byte) 0);
-            }else{
+            } else {
                 Arrays.fill(field, (byte) 1);
             }
 
@@ -83,9 +66,9 @@ public class Main {
 
     public static void main(String[] args) {
         // Use id as arguments to set peerProcess ID
-        if (args.length >= 1){
+        if (args.length >= 1) {
             new Main(Integer.parseInt(args[0]));
-        }else{
+        } else {
             new Main(1001); // default id is 1001
         }
     }
