@@ -44,9 +44,9 @@ public class Peer extends Thread {
             }
 
             //P2PMessageProcess p2PMessageProcess = new P2PMessageProcess(id);
-            //send handshake message
+            //TODO 2-a: send handshake message
             p2PMessageProcess.sendHandShakeMsg(out);
-
+            // TODO 2-a: receive handshake message
             byte[] handshakeMsg = (byte[]) in.readObject();
             int peerID = p2PMessageProcess.getHandshakeId(handshakeMsg);
             P2PFileProcess.Log(P2PMessageProcess.id, P2PFileProcess.LOG_CONNECTFROM, peerID);
@@ -55,15 +55,12 @@ public class Peer extends Thread {
             if (p2PMessageProcess.getHandshakeHeader(handshakeMsg).equals(peerHeaderValue) && (peerInfo == null || peerInfo.ID == peerID)) {
                 state = "handshake";
                 System.out.println("-----------------we have connected the right neighbour-----------------");
-                //send BitField
+                //TODO 2-b: send BitField
                 p2PMessageProcess.sendBitField(out);
                 //add peer to the peer map in order to send not interested to all neighbours
                 p2PMessageProcess.constructPeerMap(peerID, this);
                 System.out.println("the peer " + P2PMessageProcess.id + " " + "can send message to " + peerID + " by this out channel");
 
-                // test send piece
-//                byte[] pieceID = P2PMessageProcess.intToByteArray(5);
-//                p2PMessageProcess.sendPiece(pieceID,out);
             }
 
             //handle the actual message after handshake

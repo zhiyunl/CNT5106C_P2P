@@ -1,3 +1,6 @@
+// Group 55
+// Haoran Jia, Ziying Wang, Zhiyun Ling
+
 package com.company.impl;
 
 import com.company.helper.P2PFileProcess;
@@ -22,12 +25,13 @@ public class Main {
         P2PFileProcess p2PFileProcess = new P2PFileProcess();
 
         try {
-            //get the number of pieces that we should cut.
+            //TODO 1-a: load common.cfg
             p2PFileProcess.CommonCfg();
 
-            //get all peers information
+            //TODO 1-b: load peerinfo.cfg
             List<P2PFileProcess.PeerInfo> peersInfo = p2PFileProcess.PeerInfoCfg();
-            // TODO uncomment this to generate test data
+
+            // uncomment this to generate test data
 //            p2PFileProcess.DataGeneration(id);
 
             // load pieces from file into 2d byte array
@@ -48,7 +52,7 @@ public class Main {
                 }
             }
 
-            //initialize field
+            //TODO 1-b: initialize bit field
             int myIndex = P2PFileProcess.getPeerIndexByID(id);
             if (peersInfo.get(myIndex).hasFile == 0) {
                 Arrays.fill(field, (byte) 0);

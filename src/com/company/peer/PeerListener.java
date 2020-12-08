@@ -24,6 +24,7 @@ public class PeerListener extends Thread {
         int clientNum = 0;
         //listen to all the request
         try {
+            // TODO 1-c: TCP connection to all previous peers
             //The higher id try to connect the lower id peer
             for (P2PFileProcess.PeerInfo peerInfo : peersInfo) {
                 if (peerInfo.ID >= id) {
@@ -33,7 +34,7 @@ public class PeerListener extends Thread {
                 Socket connection = new Socket(peerInfo.hostName, peerInfo.port);
                 new Peer(connection, new P2PMessageProcess(id), peerInfo).start();
                 P2PFileProcess.Log(id, P2PFileProcess.LOG_CONNECTTO, peerInfo.ID);
-                System.out.println("Connected to localhost in port " + peerInfo.port);
+                System.out.println("Connected to " + peerInfo.hostName + " in port " + peerInfo.port);
                 clientNum++;
             }
 
@@ -46,7 +47,7 @@ public class PeerListener extends Thread {
                 }
             }
 
-            // //The lower id try to listen to the higher id peer to connect
+            // The lower id try to listen to the higher id peer to connect
             System.out.println(sPort + " begin to listen connection request");
             ServerSocket listener = new ServerSocket(sPort);
             while (true) {
