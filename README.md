@@ -1,7 +1,10 @@
 # CNT5106C_P2P
 This is a course project for CNT5106C Computer Networks (FALL 2020)
 
-### Using script to compile, deploy and run on all servers
+## Demo
+https://uflorida-my.sharepoint.com/:v:/g/personal/zhiyunling_ufl_edu/EaO2bsq1dQtAlebD9naf10wBfabF-mW1xuML4iyV8J0QyQ
+
+## Using script to compile, deploy and run on all servers
 1. Put cfg files and file folders under *$PROJ_DIR$* directory, cd to *$PROJ_DIR$*. e.g. CNT5106C_P2P
 1. make sure you have generated your own ssh key pair, and have it uploaded onto server.
    Otherwise, you need to enter password for each login.
@@ -10,7 +13,7 @@ This is a course project for CNT5106C Computer Networks (FALL 2020)
 bash deploy.sh
 ```
 
-### Manual deploy or local test in terminal
+## Manual deploy or local test in terminal
 1. Upload all src code and files onto server
 
 To build, use
